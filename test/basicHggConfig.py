@@ -15,9 +15,9 @@ process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 
 ## MessageLogger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
-process.MessageLogger.cerr.FwkReport.reportEvery = 5000
-process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(False),
-                                        SkipEvent = cms.untracked.vstring('ProductNotFound')
+process.MessageLogger.cerr.FwkReport.reportEvery = 1
+process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(False)
+                                        #SkipEvent = cms.untracked.vstring('ProductNotFound')
                                         ) 
 
 # configure from command line
@@ -51,15 +51,20 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 #if preFix.find('/store')>=0 :
 #    process.source.fileNames=fillFromStore(preFix,ffile,step)
 #else :
-process.source = cms.Source("PoolSource",fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_1.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_2.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_3.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_4.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_5.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_6.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_7.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_8.root",
-"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_9.root"))
+#process.source = cms.Source("PoolSource",fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_1.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_2.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_3.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_4.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_5.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_6.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_7.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_8.root",
+#"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_9.root"))
+
+process.source = cms.Source("PoolSource",
+                           # fileNames=cms.untracked.vstring("root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC22/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PH2_1K_FB_V6_UPGHGCalV5-v1/00000/1CC2630B-6A8F-E411-95D3-0025905A48BA.root"),
+                            fileNames=cms.untracked.vstring("file:HggRelval.root"),
+                            skipEvents=cms.untracked.uint32(0))
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
@@ -78,11 +83,12 @@ process.hgg = cms.EDAnalyzer("BasicHggAnalyser",
 												endcapRecHitCollection = cms.untracked.InputTag("HGCalRecHit:HGCEERecHits"),
 												endcapSuperClusterCollection = cms.untracked.InputTag("particleFlowSuperClusterHGCEE"),
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
+												genParticlesTag =  cms.untracked.InputTag("genParticles"),
                           )
 
 
 #run it
-process.p = cms.Path(process.analysis*
+process.p = cms.Path(#process.analysis
 										 process.hgg
 )
 
