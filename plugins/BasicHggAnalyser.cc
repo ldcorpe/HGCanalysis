@@ -40,6 +40,7 @@
 
 #include "TTree.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 using namespace std;
@@ -48,13 +49,28 @@ using namespace std;
 // class declaration
 //
 // limit dR allowed for geometrical matching of reco/gen particles
-float dRLim =0.1;
+float dRLim =0.05;
 
 // information to be loaded into TTree
 struct infoTruth_t {
 
-float eta;
-int matchIndex;
+	float  eReco_over_eTrue;
+	float eta;
+	float etaSC;
+	float etaSeed;
+	float phi;
+	float phiSC;
+	float phiSeed;
+	int matchIndex;
+	float pt;
+	float eTrue;
+	float eReco;
+	float eSeed;
+	float eSeed_over_eReco;
+	float phiWidth;
+	float etaWidth;
+	int clustersSize;
+	int nClusters09;
 
 };
 
@@ -65,7 +81,9 @@ struct info_t {
 	float eReco;
 	float eTrue;
 	int  matchIndex;
+	float  eReco_over_eTrue;
 	float mass;
+	int clustersSize;
 };
 
 // .h class info
@@ -100,6 +118,7 @@ class BasicHggAnalyser : public edm::EDAnalyzer {
 		TH1F *eta_h; 
 		TH1F *phi_h; 
 		TH1F *dEta_h; 
+		TH2F *phiW_v_eRoT_h; 
 		TH1F *dPhi_h;
 		TH1F *nSC_h;
 		TH1F *eRoT_h;  //energy true over reco ie etrue/ ereco
@@ -113,28 +132,47 @@ BasicHggAnalyser::BasicHggAnalyser(const edm::ParameterSet& iConfig):
 	endcapClusterCollection_(consumes <edm::View<reco::PFCluster> > (iConfig.getUntrackedParameter<edm::InputTag>("endcapClusterCollection",edm::InputTag("particleFlowClusterHGCEE")))),
 	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles"))))
 {
-edm::Service<TFileService> fs_;
+	edm::Service<TFileService> fs_;
 	eta_h         = fs_->make<TH1F>("eta_h","eta_h",100,-5,5);
 	phi_h         = fs_->make<TH1F>("phi_h","phi_h",100,-5,5);
 	dEta_h        = fs_->make<TH1F>("dEta_h","dEta_h",1000,-1,1);
 	dPhi_h        = fs_->make<TH1F>("dPhi_h","dPhi_h",1000,3,3.3);
- eRoT_h        = fs_->make<TH1F>("eRoT_h","eRoT_h",1000,-2,2);
- nSC_h        = fs_->make<TH1F>("nSC","nSC",100,0,100);
+	eRoT_h        = fs_->make<TH1F>("eRoT_h","eRoT_h",1000,-2,2);
+	phiW_v_eRoT_h        = fs_->make<TH2F>("phiW_v_eRoT_h","phiW_v_eRoT_h",100,0,0.1,100,0,1.3);
+	nSC_h        = fs_->make<TH1F>("nSC","nSC",100,0,100);
 
 
 	tree = fs_->make<TTree>("tree","");
+	tree->Branch("eReco_over_eTrue"              ,&info.eReco_over_eTrue             ,"eReco_over_eTrue/F");
+	tree->Branch("pt"              ,&info.pt             ,"pt/F");
 	tree->Branch("eta"              ,&info.eta             ,"eta/F");
 	tree->Branch("phi"              ,&info.phi             ,"phi/F");
 	tree->Branch("eReco"              ,&info.eReco            ,"eReco/F");
 	tree->Branch("eTrue"              ,&info.eTrue            ,"eTrue/F");
 	tree->Branch("matchIndex"              ,&info.matchIndex            ,"matchIndex/I");
-	
+	tree->Branch("clustersSize"              ,&info.clustersSize            ,"clustersSize/I");
+
 	treeTruth = fs_->make<TTree>("treeTruth","");
+	treeTruth->Branch("pt"              ,&infoTruth.pt            ,"pt/F");
+	treeTruth->Branch("eReco"              ,&infoTruth.eReco            ,"eReco/F");
+	treeTruth->Branch("eTrue"              ,&infoTruth.eTrue            ,"eTrue/F");
+	treeTruth->Branch("eSeed"              ,&infoTruth.eSeed            ,"eSeed/F");
+	treeTruth->Branch("eSeed_over_eReco"   ,&infoTruth.eSeed_over_eReco             ,"eSeed_over_eReco/F");
+	treeTruth->Branch("eReco_over_eTrue"              ,&infoTruth.eReco_over_eTrue             ,"eReco_over_eTrue/F");
 	treeTruth->Branch("eta"              ,&infoTruth.eta             ,"eta/F");
+	treeTruth->Branch("etaSC"              ,&infoTruth.etaSC             ,"etaSC/F");
+	treeTruth->Branch("etaSeed"              ,&infoTruth.etaSeed             ,"etaSeed/F");
+	treeTruth->Branch("phi"              ,&infoTruth.phi             ,"phi/F");
+	treeTruth->Branch("phiSC"              ,&infoTruth.phiSC             ,"phiSC/F");
+	treeTruth->Branch("phiSeed"              ,&infoTruth.phiSeed             ,"phiSeed/F");
 	treeTruth->Branch("matchIndex"              ,&infoTruth.matchIndex            ,"matchIndex/I");
+	treeTruth->Branch("clustersSize"              ,&infoTruth.clustersSize           ,"clustersSize/I");
+	treeTruth->Branch("nClusters09"              ,&infoTruth.nClusters09           ,"nClusters09/I");
+	treeTruth->Branch("etaWidth"              ,&infoTruth.etaWidth             ,"etaWidth/F");
+	treeTruth->Branch("phiWidth"              ,&infoTruth.phiWidth             ,"phiWidth/F");
 }
 
- // destructor
+// destructor
 BasicHggAnalyser::~BasicHggAnalyser()
 {
 
@@ -171,30 +209,64 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 	std::cout << "[debug] number of rechits " << HGCEERechits->size() <<", SCs " << sclusters.size() << ", clusters " << clusters.size() << " gens " << gens.size() <<   std::endl;
 
 	std::cout << "[DEBUG] 0" << std::endl;
-	
+
 	// initialise tree entries
+	info.pt=-999.;
 	info.eta=-999.;
 	info.phi=-999.;
 	info.eReco=-999.;
 	info.eTrue=-999.;
 	info.matchIndex=-999;
 	infoTruth.eta=-999.;
+	infoTruth.etaSC=-999.;
+	infoTruth.etaSeed=-999.;
+	infoTruth.phi=-999.;
+	infoTruth.phiSC=-999.;
+	infoTruth.phiSeed=-999.;
+	infoTruth.etaWidth=-999.;
+	infoTruth.phiWidth=-999.;
 	infoTruth.matchIndex=-999;
-	
-	
+	infoTruth.clustersSize=-999;
+	infoTruth.nClusters09=-999;
+	infoTruth.eReco  =-999.;         
+	infoTruth.eTrue         =-999.;  
+	infoTruth.eSeed           =-999.;
+	infoTruth.eSeed_over_eReco=-999.;
+
+
+
 	nSC_h->Fill(sclusters.size());
-	
+
 	for (unsigned int igp =0; igp < gens.size() ; igp++) { // loop over gen particles to fill truth-level tree
 
-	infoTruth.eta=-999.;
-	infoTruth.matchIndex=-999;
-	
-	if (gens[igp]->pdgId() != 22 || gens[igp]->status() != 3) continue;
+		infoTruth.eta=-999.;
+	infoTruth.etaSC=-999.;
+	infoTruth.etaSeed=-999.;
+	infoTruth.phi=-999.;
+	infoTruth.phiSC=-999.;
+	infoTruth.phiSeed=-999.;
+		infoTruth.eReco_over_eTrue = -999.;
+		infoTruth.matchIndex=-999;
+		infoTruth.pt=-999.;
+		infoTruth.clustersSize=-999;
+		infoTruth.nClusters09=-999;
+		infoTruth.eReco  =-999.;         
+		infoTruth.eTrue         =-999.;  
+		infoTruth.eSeed           =-999.;
+		infoTruth.eSeed_over_eReco=-999.;
+	  infoTruth.etaWidth=-999.;
+	  infoTruth.phiWidth=-999.;
+
+		if (gens[igp]->pdgId() != 22 || gens[igp]->status() != 3) continue;
 		assert(gens.size() >0); // only the case for the electron gun sample
 		infoTruth.eta=gens[igp]->eta();
+		infoTruth.phi      = gens[igp]->phi();
+
 		std::cout << "[debug] gen pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", e " << gens[igp]->energy() << ", mother " << std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;
 
 		float dRBest =999;
+		infoTruth.pt = gens[igp]->pt();
+		infoTruth.eTrue = gens[igp]->energy();
 
 		for (unsigned int isc =0; isc < sclusters.size() ; isc++){ //subloop over sc's to find matches
 
@@ -214,33 +286,70 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 
 		}
 
-		if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1)
+		//float recoPt = -999.;
+		if (infoTruth.matchIndex >-1) {
+			//	recoPt = sclusters[infoTruth.matchIndex]->energy() /std::cosh(sclusters[infoTruth.matchIndex]->eta());
+			infoTruth.eReco = (sclusters[infoTruth.matchIndex]->energy());
+			infoTruth.eSeed = (sclusters[infoTruth.matchIndex]->seed()->energy());
+			infoTruth.eSeed_over_eReco = (sclusters[infoTruth.matchIndex]->seed()->energy()/sclusters[infoTruth.matchIndex]->energy());
+			infoTruth.eReco_over_eTrue = (sclusters[infoTruth.matchIndex]->energy()/gens[igp]->energy());
+			infoTruth.clustersSize = (int) sclusters[infoTruth.matchIndex]->clustersSize();
+			infoTruth.etaWidth=sclusters[infoTruth.matchIndex]->etaWidth();
+			infoTruth.phiWidth=sclusters[infoTruth.matchIndex]->phiWidth();
+			infoTruth.etaSC    = sclusters[infoTruth.matchIndex]->eta();
+			infoTruth.etaSeed  =sclusters[infoTruth.matchIndex]->seed()->eta();
+			infoTruth.phiSC    = sclusters[infoTruth.matchIndex]->phi();
+			infoTruth.phiSeed  =sclusters[infoTruth.matchIndex]->seed()->phi();
+
+			for (unsigned int ic =0 ; ic < sclusters[infoTruth.matchIndex]->clusters().size() ; ic++){
+				infoTruth.nClusters09 = ic+1; 
+				if((sclusters[infoTruth.matchIndex]->clusters())[ic]->energy()/infoTruth.eReco >0.9) break;
+			}
+		}
+
+		//if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1 &&  recoPt >40)
+		if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1 &&  gens[igp]->pt() >40)
 		{
-		eRoT_h->Fill(sclusters[infoTruth.matchIndex]->energy()/gens[igp]->energy());
+			eRoT_h->Fill(sclusters[infoTruth.matchIndex]->energy()/gens[igp]->energy());
+			phiW_v_eRoT_h->Fill(infoTruth.phiWidth,infoTruth.eReco_over_eTrue);
+
+			if(infoTruth.eReco_over_eTrue <0.7){
+				std::cout << "MATCH with eReco/eTrue <0.7" << std::endl;
+				std::cout << "_____|  RECO    |  TRUE    |" <<  std::endl;
+				std::cout << " eta | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->eta() <<" | "<< gens[igp]->eta()<< std::endl;
+				std::cout << " phi | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->phi() <<" | "<< gens[igp]->phi()<< std::endl;
+				std::cout << " e   | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->energy() <<" | "<< gens[igp]->energy()<< std::endl;
+				std::cout << " e   | " << std::setprecision(5) << infoTruth.eReco <<" | "<< infoTruth.eTrue<< std::endl;
+			}
 		}
 
 		treeTruth->Fill();
 	}
 
-//--------------> End per-genPhoton tree <------------------
+	//--------------> End per-genPhoton tree <------------------
 
 
-//--------------> Begin per-SC tree <---------------------- 
+	//--------------> Begin per-SC tree <---------------------- 
 
 	// loop over superclusters (eg reco particles). 
 	for( unsigned int isc =0; isc< sclusters.size() ; isc++){ // isc = index_super_cluster
 
+		info.eReco_over_eTrue=-999.;
+		info.pt=-999.;
 		info.eta=-999.;
 		info.phi=-999.;
 		info.eReco=-999.;
 		info.eTrue=-999.;
 		info.matchIndex=-999;
+		info.clustersSize=-999;
 
 		std::cout << " sc " << isc<< " eta " << sclusters[isc]->eta() << ", phi " << sclusters[isc]->phi()<< std::endl;
-		
+
+		info.pt= sclusters[isc]->energy() /std::cosh(sclusters[isc]->eta());
 		info.eta=sclusters[isc]->eta();
 		info.phi=sclusters[isc]->phi();
 		info.eReco = sclusters[isc]->energy();
+		info.clustersSize = (int) sclusters[isc]->clustersSize();;
 
 		// fill histograms with eta/phi info
 		eta_h->Fill(info.eta);
@@ -265,13 +374,14 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 				info.eTrue = gens[igp]->energy();
 
 			}
-			}
+		}
 
-			if(info.matchIndex >-1){	
-    //	eRoT_h->Fill(info.eReco/info.eTrue);
-			}
-			tree->Fill();
-		
+		if(info.matchIndex >-1){	
+			info.eReco_over_eTrue = info.eReco/info.eTrue; 
+			//	eRoT_h->Fill(info.eReco/info.eTrue);
+		}
+		tree->Fill();
+
 	}
 	/*
 		 if (eTrue[0] <0) {
