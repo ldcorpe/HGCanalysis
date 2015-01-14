@@ -93,7 +93,8 @@ class BasicHggAnalyser : public edm::EDAnalyzer {
 		~BasicHggAnalyser();
 
 		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-
+		
+		float resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc, const edm::PtrVector<reco::PFCluster>& clusters);
 
 	private:
 
@@ -184,6 +185,23 @@ BasicHggAnalyser::~BasicHggAnalyser()
 //
 
 // ------------ method called for each event  ------------
+
+float BasicHggAnalyser::resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters){
+
+	for (unsigned int ic =0 ; ic < sc->clusters().size() ; ic++){
+		std::cout << "TEST, sc constituent em energies " << (sc->clusters())[ic]->energy() << std::endl;
+		for (unsigned int j =0 ; j < clusters.size() ; j++){
+		
+		if (clusters[j]->position==(sc->clusters())[ic]->position()) {
+		std::cout << "TEST, corresponding cluster " << (clusters[j]->emEnergy()) << std::endl;
+		}
+		}
+	
+		}
+
+	return 1.;
+}
+
 	void
 BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
@@ -300,6 +318,9 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 			infoTruth.etaSeed  =sclusters[infoTruth.matchIndex]->seed()->eta();
 			infoTruth.phiSC    = sclusters[infoTruth.matchIndex]->phi();
 			infoTruth.phiSeed  =sclusters[infoTruth.matchIndex]->seed()->phi();
+
+			float a = resumEmEnergy(sclusters[infoTruth.matchIndex], clusters);
+			if(a) std::cout << "avoid ununsed var" << std::endl;
 
 			for (unsigned int ic =0 ; ic < sclusters[infoTruth.matchIndex]->clusters().size() ; ic++){
 				infoTruth.nClusters09 = ic+1; 
@@ -421,6 +442,8 @@ std::cout << "e_reco " << info.eReco[1] << ", e_true" << gens[info.matchIndex[1]
 */
 return ;
 }
+
+
 
 
 // ------------ method called once each job just before starting event loop  ------------
