@@ -1,7 +1,7 @@
 // -*- C++ -*-
 //
-// Package:    BasicHggAnalyser
-// Class:      BasicHggAnalyser
+// Package:    AMStyleHggAnalyser
+// Class:      AMStyleHggAnalyser
 // 
 //
 //
@@ -34,34 +34,39 @@
 #include "DataFormats/ForwardDetId/interface/HGCEEDetId.h"
 #include "DataFormats/ForwardDetId/interface/HGCHEDetId.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
+#include "FWCore/Framework/interface/ESHandle.h"
 
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "FWCore/Utilities/interface/InputTag.h"
 
 #include "TTree.h"
+#include "TMath.h"
 #include "TH1.h"
 #include "TH2.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
+#include "Geometry/FCalGeometry/interface/HGCalGeometry.h"
+#include "DetectorDescription/OfflineDBLoader/interface/GeometryInfoDump.h"
+
 using namespace std;
 
 //
 // class declaration
 //
 // limit dR allowed for geometrical matching of reco/gen particles
-float dRLim =0.05;
+float maxDr =0.05;
 
 // information to be loaded into TTree
 struct infoTruth_t {
 
-	float  eReco_over_eTrue;
+	float eReco_over_eTrue;
 	float eta;
 	float etaSC;
 	float etaSeed;
 	float phi;
 	float phiSC;
 	float phiSeed;
-	int matchIndex;
+	int   matchIndex;
 	float pt;
 	float eTrue;
 	float eReco;
@@ -87,15 +92,17 @@ struct info_t {
 };
 
 // .h class info
-class BasicHggAnalyser : public edm::EDAnalyzer {
+class AMStyleHggAnalyser : public edm::EDAnalyzer {
 	public:
-		explicit BasicHggAnalyser(const edm::ParameterSet&);
-		~BasicHggAnalyser();
+		explicit AMStyleHggAnalyser(const edm::ParameterSet&);
+		~AMStyleHggAnalyser();
 
 		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-		
+		double DeltaPhi(const double & phi1, const double & phi2);
 		float resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc, const edm::PtrVector<reco::PFCluster>& clusters);
 		float clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c, const edm::PtrVector<reco::PFCluster>& clusters);
+	//	float get3x3EmEnergy(const edm::PtrVector<reco::PFRecHit>& rechits, const edm::PtrVector<reco::PFCluster>& clusters,  const edm::Ptr<reco::SuperCluster>& sc);
+		float get3x3EmEnergy(const 	edm::Handle<HGCRecHitCollection>&  rechits, const edm::PtrVector<reco::PFCluster>& clusters,  const edm::Ptr<reco::SuperCluster>& sc, const edm::EventSetup& iSetup);
 
 	private:
 
@@ -113,6 +120,9 @@ class BasicHggAnalyser : public edm::EDAnalyzer {
 		edm::EDGetTokenT<edm::View<reco::PFCluster> >endcapClusterCollection_     ;
 		edm::EDGetTokenT<edm::View<reco::GenParticle> >genParticlesCollection_     ;
 
+		std::vector<std::string> geometrySource_;
+		
+  	edm::Handle<HGCRecHitCollection> recHits_;	
 		TTree *tree;
 		TTree *treeTruth;
 		info_t info;
@@ -133,12 +143,14 @@ class BasicHggAnalyser : public edm::EDAnalyzer {
 };
 
 // constructor
-BasicHggAnalyser::BasicHggAnalyser(const edm::ParameterSet& iConfig):
+AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	endcapRecHitCollection_(consumes <edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >(iConfig.getUntrackedParameter<edm::InputTag>("endcapRecHitCollection",     edm::InputTag("HGCalRecHit:HGCEERecHits")))),
 	endcapSuperClusterCollection_(consumes <edm::View<reco::SuperCluster> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapSuperClusterCollection",edm::InputTag("particleFlowSuperClusterHGCEE")))),
 	endcapClusterCollection_(consumes <edm::View<reco::PFCluster> > (iConfig.getUntrackedParameter<edm::InputTag>("endcapClusterCollection",edm::InputTag("particleFlowClusterHGCEE")))),
 	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles"))))
 {
+
+ geometrySource_ = iConfig.getUntrackedParameter< std::vector<std::string> >("geometrySource");
 	edm::Service<TFileService> fs_;
 	eta_h         = fs_->make<TH1F>("eta_h","eta_h",100,-5,5);
 	phi_h         = fs_->make<TH1F>("phi_h","phi_h",100,-5,5);
@@ -184,7 +196,7 @@ BasicHggAnalyser::BasicHggAnalyser(const edm::ParameterSet& iConfig):
 }
 
 // destructor
-BasicHggAnalyser::~BasicHggAnalyser()
+AMStyleHggAnalyser::~AMStyleHggAnalyser()
 {
 
 }
@@ -196,7 +208,7 @@ BasicHggAnalyser::~BasicHggAnalyser()
 
 // ------------ method called for each event  ------------
 
-float BasicHggAnalyser::resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters){
+float AMStyleHggAnalyser::resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters){
 
 	float total=0;
 	for (unsigned int ic =0 ; ic < sc->clusters().size() ; ic++){
@@ -214,8 +226,71 @@ float BasicHggAnalyser::resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc,con
 
 	return total;
 }
+double AMStyleHggAnalyser::DeltaPhi(const double & phi1, const double & phi2){
+double dphi = phi1 - phi2;
+if (dphi< (-1.*TMath::Pi())) dphi += 2*TMath::Pi();
+if (dphi>TMath::Pi()) dphi -= 2*TMath::Pi();
+return dphi;
+}
 
-float BasicHggAnalyser::clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c,const edm::PtrVector<reco::PFCluster>& clusters){
+//float AMStyleHggAnalyser::get3x3EmEnergy(const edm::PtrVector<reco::PFRecHit>& rechits, const edm::PtrVector<reco::PFCluster>& clusters, const edm::Ptr<reco::SuperCluster>& sc){
+float AMStyleHggAnalyser::get3x3EmEnergy(const 	edm::Handle<HGCRecHitCollection>& recHits, const edm::PtrVector<reco::PFCluster>& clusters, const edm::Ptr<reco::SuperCluster>& sc,const edm::EventSetup& iSetup ){
+
+
+// int layerCtrOffset(1);
+
+edm::ESHandle<HGCalGeometry> geomH;
+iSetup.get<IdealGeometryRecord>().get(geometrySource_[0],geomH);
+
+const HGCalGeometry *geom=geomH.product();
+float eta = sc->eta();
+float phi = sc->phi();
+float dRmin =9999.;
+//int match =-1;
+DetId  id_; 
+//int k=0;
+
+GlobalPoint refPos;
+//for (unsigned int k=0; k < rechits->size() ; k++) {
+for(HGCRecHitCollection::const_iterator hit_it=recHits->begin(); hit_it!=recHits->end(); hit_it++){
+	//	std::cout << "TEST, rechits rho,eta, phi " << rechits[k]->positionREP() << std::endl;
+	refPos= geom->getPosition(hit_it->id()) ;
+	float dEta =0;
+	float dPhi =0;
+
+	dEta = refPos.eta() -eta;
+	dPhi = DeltaPhi(refPos.phi() ,phi);
+
+	float dR = sqrt (dEta*dEta + dPhi*dPhi);
+
+	if(dR < dRmin  ){
+		dRmin = dR;
+	//	match =k;
+    id_ = hit_it->id();
+	}
+//k++;
+}
+ //decode position
+ //uint32_t recoDetId(recHits->find(id_)->id());
+
+ //const GlobalPoint refPos( std::move( geom->getPosition(recoDetId) ) );
+ int layer( ((id_ >> 19) & 0x1f) );// + layerCtrOffset-1 );
+
+
+refPos= geom->getPosition(id_) ;
+
+//std::cout << "NEIGHOURS " << recHits->find(id_)->neighbours4()->size()<< std::endl;
+
+std::cout << "sc eta, phi " << eta << ", " << phi << std::endl;
+std::cout << "match rechit eta, phi, layer " << refPos.eta() << ", " << refPos.phi() << ", " << layer <<  std::endl;
+
+	return (eta+phi);				
+}
+
+
+
+
+float AMStyleHggAnalyser::clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c,const edm::PtrVector<reco::PFCluster>& clusters){
 
 	float emEnergy=0;
 	//for (unsigned int ic =0 ; ic < sc->clusters().size() ; ic++){
@@ -233,14 +308,16 @@ float BasicHggAnalyser::clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c,con
 }
 
 	void
-BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
 	using namespace edm;
+	iEvent.getByLabel(edm::InputTag("HGCalRecHit:HGCEERecHits"),recHits_);
 
-
-	Handle<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> >  > HGCEERechits;
-	iEvent.getByToken(endcapRecHitCollection_,HGCEERechits);
-	//const PtrVector<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >& rechits = HGCEERechits->ptrVector();
+	/*	Handle<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> >  > HGCEERechits;
+			iEvent.getByToken(endcapRecHitCollection_,HGCEERechits);
+			iEvent.getByLabel(edm::InputTag("HGCalRecHit",hitCollections_[i]),recHits);*/
+//	const PtrVector<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >& rechits = recHits_->ptrVector();
+	std::cout << "RECHIT SIZE " << recHits_->size() << std::endl;
 
 	Handle<edm::View<reco::SuperCluster> > HGCEESCs;
 	iEvent.getByToken(endcapSuperClusterCollection_,HGCEESCs);
@@ -325,7 +402,7 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 			dP =dP*dP;
 			float dR = sqrt(dE +dP);
 
-			if (dR < dRLim && dR < dRBest) { // only true if dR is both below limit value and smaller than previous best dR.
+			if (dR < maxDr && dR < dRBest) { // only true if dR is both below limit value and smaller than previous best dR.
 				dRBest = dR;
 
 				// so, if we have a dR match, then store the corresponding match index.
@@ -350,7 +427,8 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 			infoTruth.phiSC    = sclusters[infoTruth.matchIndex]->phi();
 			infoTruth.phiSeed  =sclusters[infoTruth.matchIndex]->seed()->phi();
 
-
+			float test = get3x3EmEnergy(  recHits_, clusters, sclusters[infoTruth.matchIndex], iSetup);
+				if (test) ;
 
 			for (unsigned int ic =0 ; ic < sclusters[infoTruth.matchIndex]->clusters().size() ; ic++){
 				infoTruth.nClusters09 = ic+1; 
@@ -422,7 +500,7 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 			dP =dP*dP;
 			float dR = sqrt(dE +dP);
 
-			if (dR < dRLim && dR < dRBest) { // only true if dR is both below limit value and smaller than previous best dR.
+			if (dR < maxDr && dR < dRBest) { // only true if dR is both below limit value and smaller than previous best dR.
 				dRBest = dR;
 
 				// so, if we have a dR match, then store the corresponding match index.
@@ -483,43 +561,43 @@ return ;
 
 // ------------ method called once each job just before starting event loop  ------------
 	void 
-BasicHggAnalyser::beginJob()
+AMStyleHggAnalyser::beginJob()
 {
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
 	void 
-BasicHggAnalyser::endJob() 
+AMStyleHggAnalyser::endJob() 
 {
 }
 
 // ------------ method called when starting to processes a run  ------------
 	void 
-BasicHggAnalyser::beginRun(edm::Run const&, edm::EventSetup const&)
+AMStyleHggAnalyser::beginRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when ending the processing of a run  ------------
 	void 
-BasicHggAnalyser::endRun(edm::Run const&, edm::EventSetup const&)
+AMStyleHggAnalyser::endRun(edm::Run const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when starting to processes a luminosity block  ------------
 	void 
-BasicHggAnalyser::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
+AMStyleHggAnalyser::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method called when ending the processing of a luminosity block  ------------
 	void 
-BasicHggAnalyser::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
+AMStyleHggAnalyser::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
 {
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void
-BasicHggAnalyser::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+AMStyleHggAnalyser::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
 	//The following says we do not know what parameters are allowed so do no validation
 	// Please change this to state exactly what you do use, even if it is no parameters
 	edm::ParameterSetDescription desc;
@@ -528,4 +606,4 @@ BasicHggAnalyser::fillDescriptions(edm::ConfigurationDescriptions& descriptions)
 }
 
 //define this as a plug-in
-DEFINE_FWK_MODULE(BasicHggAnalyser);
+DEFINE_FWK_MODULE(AMStyleHggAnalyser);
