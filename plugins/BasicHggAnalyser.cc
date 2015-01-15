@@ -122,6 +122,7 @@ class BasicHggAnalyser : public edm::EDAnalyzer {
 		TH2F *phiW_v_eRoT_h; 
 		TH1F *dPhi_h;
 		TH1F *nSC_h;
+		TH1F *eRoT_OLD_h;  //energy true over reco ie etrue/ ereco
 		TH1F *eRoT_h;  //energy true over reco ie etrue/ ereco
 
 };
@@ -138,6 +139,7 @@ BasicHggAnalyser::BasicHggAnalyser(const edm::ParameterSet& iConfig):
 	phi_h         = fs_->make<TH1F>("phi_h","phi_h",100,-5,5);
 	dEta_h        = fs_->make<TH1F>("dEta_h","dEta_h",1000,-1,1);
 	dPhi_h        = fs_->make<TH1F>("dPhi_h","dPhi_h",1000,3,3.3);
+	eRoT_OLD_h        = fs_->make<TH1F>("eRoT_OLD_h","eRoT_OLD_h",1000,-2,2);
 	eRoT_h        = fs_->make<TH1F>("eRoT_h","eRoT_h",1000,-2,2);
 	phiW_v_eRoT_h        = fs_->make<TH2F>("phiW_v_eRoT_h","phiW_v_eRoT_h",100,0,0.1,100,0,1.3);
 	nSC_h        = fs_->make<TH1F>("nSC","nSC",100,0,100);
@@ -188,18 +190,21 @@ BasicHggAnalyser::~BasicHggAnalyser()
 
 float BasicHggAnalyser::resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters){
 
+	float total=0;
 	for (unsigned int ic =0 ; ic < sc->clusters().size() ; ic++){
-		std::cout << "TEST, sc constituent em energies " << (sc->clusters())[ic]->energy() << std::endl;
+	//	std::cout << "TEST, sc constituent em energies " << (sc->clusters())[ic]->energy() << std::endl;
 		for (unsigned int j =0 ; j < clusters.size() ; j++){
-		
-		if (clusters[j]->position==(sc->clusters())[ic]->position()) {
-		std::cout << "TEST, corresponding cluster " << (clusters[j]->emEnergy()) << std::endl;
-		}
-		}
-	
+
+			if (clusters[j]->position()==(sc->clusters())[ic]->position()) {
+		//		std::cout << "TEST, corresponding cluster " << (clusters[j]->emEnergy()) << std::endl;
+				total = total +(clusters[j]->emEnergy());
+				break;
+			}
 		}
 
-	return 1.;
+	}
+
+	return total;
 }
 
 	void
@@ -258,11 +263,11 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 	for (unsigned int igp =0; igp < gens.size() ; igp++) { // loop over gen particles to fill truth-level tree
 
 		infoTruth.eta=-999.;
-	infoTruth.etaSC=-999.;
-	infoTruth.etaSeed=-999.;
-	infoTruth.phi=-999.;
-	infoTruth.phiSC=-999.;
-	infoTruth.phiSeed=-999.;
+		infoTruth.etaSC=-999.;
+		infoTruth.etaSeed=-999.;
+		infoTruth.phi=-999.;
+		infoTruth.phiSC=-999.;
+		infoTruth.phiSeed=-999.;
 		infoTruth.eReco_over_eTrue = -999.;
 		infoTruth.matchIndex=-999;
 		infoTruth.pt=-999.;
@@ -272,8 +277,8 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 		infoTruth.eTrue         =-999.;  
 		infoTruth.eSeed           =-999.;
 		infoTruth.eSeed_over_eReco=-999.;
-	  infoTruth.etaWidth=-999.;
-	  infoTruth.phiWidth=-999.;
+		infoTruth.etaWidth=-999.;
+		infoTruth.phiWidth=-999.;
 
 		if (gens[igp]->pdgId() != 22 || gens[igp]->status() != 3) continue;
 		assert(gens.size() >0); // only the case for the electron gun sample
@@ -307,7 +312,8 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 		//float recoPt = -999.;
 		if (infoTruth.matchIndex >-1) {
 			//	recoPt = sclusters[infoTruth.matchIndex]->energy() /std::cosh(sclusters[infoTruth.matchIndex]->eta());
-			infoTruth.eReco = (sclusters[infoTruth.matchIndex]->energy());
+			//infoTruth.eReco = (sclusters[infoTruth.matchIndex]->energy());
+			infoTruth.eReco = resumEmEnergy(sclusters[infoTruth.matchIndex], clusters);
 			infoTruth.eSeed = (sclusters[infoTruth.matchIndex]->seed()->energy());
 			infoTruth.eSeed_over_eReco = (sclusters[infoTruth.matchIndex]->seed()->energy()/sclusters[infoTruth.matchIndex]->energy());
 			infoTruth.eReco_over_eTrue = (sclusters[infoTruth.matchIndex]->energy()/gens[igp]->energy());
@@ -319,8 +325,7 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 			infoTruth.phiSC    = sclusters[infoTruth.matchIndex]->phi();
 			infoTruth.phiSeed  =sclusters[infoTruth.matchIndex]->seed()->phi();
 
-			float a = resumEmEnergy(sclusters[infoTruth.matchIndex], clusters);
-			if(a) std::cout << "avoid ununsed var" << std::endl;
+
 
 			for (unsigned int ic =0 ; ic < sclusters[infoTruth.matchIndex]->clusters().size() ; ic++){
 				infoTruth.nClusters09 = ic+1; 
@@ -331,7 +336,8 @@ BasicHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
 		//if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1 &&  recoPt >40)
 		if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1 &&  gens[igp]->pt() >40)
 		{
-			eRoT_h->Fill(sclusters[infoTruth.matchIndex]->energy()/gens[igp]->energy());
+			eRoT_OLD_h->Fill(sclusters[infoTruth.matchIndex]->energy()/gens[igp]->energy());
+			eRoT_h->Fill(infoTruth.eReco/gens[igp]->energy());
 			phiW_v_eRoT_h->Fill(infoTruth.phiWidth,infoTruth.eReco_over_eTrue);
 
 			if(infoTruth.eReco_over_eTrue <0.7){
