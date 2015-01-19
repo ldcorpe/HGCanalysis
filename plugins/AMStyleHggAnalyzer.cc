@@ -38,7 +38,8 @@
 
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "FWCore/Utilities/interface/InputTag.h"
-
+#include "DataFormats/ForwardDetId/interface/HGCEEDetId.h"
+#include "DataFormats/ForwardDetId/interface/HGCHEDetId.h"
 #include "TTree.h"
 #include "TMath.h"
 #include "TH1.h"
@@ -102,7 +103,7 @@ class AMStyleHggAnalyser : public edm::EDAnalyzer {
 		float resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc, const edm::PtrVector<reco::PFCluster>& clusters);
 		float clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c, const edm::PtrVector<reco::PFCluster>& clusters);
 	//	float get3x3EmEnergy(const edm::PtrVector<reco::PFRecHit>& rechits, const edm::PtrVector<reco::PFCluster>& clusters,  const edm::Ptr<reco::SuperCluster>& sc);
-		float get3x3EmEnergy(const 	edm::Handle<HGCRecHitCollection>&  rechits, const edm::PtrVector<reco::PFCluster>& clusters,  const edm::Ptr<reco::SuperCluster>& sc, const edm::EventSetup& iSetup);
+		float get3x3EmEnergy(const edm::PtrVector<reco::PFRecHit>& rcs, const edm::PtrVector<reco::PFCluster>& clusters,  const edm::Ptr<reco::SuperCluster>& sc, const edm::EventSetup& iSetup);
 
 	private:
 
@@ -119,6 +120,7 @@ class AMStyleHggAnalyser : public edm::EDAnalyzer {
 		edm::EDGetTokenT<edm::View<reco::SuperCluster> >endcapSuperClusterCollection_;
 		edm::EDGetTokenT<edm::View<reco::PFCluster> >endcapClusterCollection_     ;
 		edm::EDGetTokenT<edm::View<reco::GenParticle> >genParticlesCollection_     ;
+		edm::EDGetTokenT<edm::View<reco::PFRecHit> > eeRecHitCollection_     ;
 
 		std::vector<std::string> geometrySource_;
 		
@@ -147,7 +149,8 @@ AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	endcapRecHitCollection_(consumes <edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >(iConfig.getUntrackedParameter<edm::InputTag>("endcapRecHitCollection",     edm::InputTag("HGCalRecHit:HGCEERecHits")))),
 	endcapSuperClusterCollection_(consumes <edm::View<reco::SuperCluster> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapSuperClusterCollection",edm::InputTag("particleFlowSuperClusterHGCEE")))),
 	endcapClusterCollection_(consumes <edm::View<reco::PFCluster> > (iConfig.getUntrackedParameter<edm::InputTag>("endcapClusterCollection",edm::InputTag("particleFlowClusterHGCEE")))),
-	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles"))))
+	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles")))),
+	eeRecHitCollection_(consumes <edm::View<reco::PFRecHit> > (iConfig.getUntrackedParameter<edm::InputTag>("eeRecHitCollection",edm::InputTag("particleFlowRecHitHGCEE:Cleaned"))))
 {
 
  geometrySource_ = iConfig.getUntrackedParameter< std::vector<std::string> >("geometrySource");
@@ -218,6 +221,12 @@ float AMStyleHggAnalyser::resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc,c
 			if (clusters[j]->position()==(sc->clusters())[ic]->position()) {
 				//		std::cout << "TEST, corresponding cluster " << (clusters[j]->emEnergy()) << std::endl;
 				total = total +(clusters[j]->emEnergy());
+
+std::vector< reco::PFRecHitFraction > recs =  clusters[j]->recHitFractions();
+
+
+//std::cout<< "SIZE OF RECHITS (alt)" << recs.size() <<", layer " << clusters[j]->layer() <<  std::endl;
+
 				break;
 			}
 		}
@@ -234,57 +243,115 @@ return dphi;
 }
 
 //float AMStyleHggAnalyser::get3x3EmEnergy(const edm::PtrVector<reco::PFRecHit>& rechits, const edm::PtrVector<reco::PFCluster>& clusters, const edm::Ptr<reco::SuperCluster>& sc){
-float AMStyleHggAnalyser::get3x3EmEnergy(const 	edm::Handle<HGCRecHitCollection>& recHits, const edm::PtrVector<reco::PFCluster>& clusters, const edm::Ptr<reco::SuperCluster>& sc,const edm::EventSetup& iSetup ){
+float AMStyleHggAnalyser::get3x3EmEnergy(const  edm::PtrVector<reco::PFRecHit>& rcs, const edm::PtrVector<reco::PFCluster>& clusters, const edm::Ptr<reco::SuperCluster>& sc,const edm::EventSetup& iSetup ){
+
+	float totalE =0;
+	float eta = sc->eta();
+	float phi = sc->phi();
+	float debug_max =0;
+//	float dRmin =9999.;
+	int match =-1;
+	DetId  id_; 
+
+	for (unsigned int iLayer =0; iLayer<30 ; iLayer++){  // iLayer = iLayer
+
+	float dRmin =9999.;
+		match =-1;
+		for (unsigned int k=0; k < rcs.size() ; k++) {
+			int hgc_layer = HGCEEDetId(rcs[k]->detId()).layer();
+
+			if(hgc_layer != (int) iLayer) continue;
+			//		std::cout << "TEST, rechits rho,eta, phi " << rcs[k]->positionREP() << std::endl;
+			float rcEta = rcs[k]->positionREP().eta(); 
+			float rcPhi = rcs[k]->positionREP().phi(); 
+			//	refPos= geom->getPosition(hit_it->id()) ;
+			float dEta =0;
+			float dPhi =0;
+
+			dEta = rcEta-eta;
+			dPhi = DeltaPhi(rcPhi ,phi);
+			if(rcs[k]->energy() > debug_max){ debug_max =rcs[k]->energy();}
+
+			float dR = sqrt (dEta*dEta + dPhi*dPhi);
+
+			if(dR < dRmin  ){
+				dRmin = dR;
+				match =k;
+				// id_ = hit_it->id();
+			}
+			//k++;
+		}
+
+		std::cout << "[info] eta,phi match for layer "<< iLayer <<" has index " << match << std::endl; 
+		std::cout << "[DEBUG]i max rechitr "<<debug_max<< std::endl; 
+		if (match==-1) continue;	
+		float maxE =rcs[match]->energy();
+		int maxEIndex =-1;
+		for( unsigned int iNeighbour=0; iNeighbour< rcs[match]->neighbours8().size(); iNeighbour++ ){
 
 
-// int layerCtrOffset(1);
+			//	float e =1;
+			float e = (rcs[match]->neighbours8()[iNeighbour])->energy();
 
-edm::ESHandle<HGCalGeometry> geomH;
-iSetup.get<IdealGeometryRecord>().get(geometrySource_[0],geomH);
+			if (e > maxE) {
 
-const HGCalGeometry *geom=geomH.product();
-float eta = sc->eta();
-float phi = sc->phi();
-float dRmin =9999.;
-//int match =-1;
-DetId  id_; 
-//int k=0;
+				maxE=e;
+				maxEIndex=iNeighbour;
 
-GlobalPoint refPos;
-//for (unsigned int k=0; k < rechits->size() ; k++) {
-for(HGCRecHitCollection::const_iterator hit_it=recHits->begin(); hit_it!=recHits->end(); hit_it++){
-	//	std::cout << "TEST, rechits rho,eta, phi " << rechits[k]->positionREP() << std::endl;
-	refPos= geom->getPosition(hit_it->id()) ;
-	float dEta =0;
-	float dPhi =0;
+			}
 
-	dEta = refPos.eta() -eta;
-	dPhi = DeltaPhi(refPos.phi() ,phi);
+		}
+		std::cout << "[info] maxE has index " << maxEIndex << " and energy " << maxE << std::endl; 
+		if (maxEIndex>-1){
 
-	float dR = sqrt (dEta*dEta + dPhi*dPhi);
+			totalE = totalE + rcs[match]->neighbours8()[maxEIndex]->energy();
+			std::cout << "[INFO] 		Addding Rechit 0 " << "gives "<< totalE << std::endl;
 
-	if(dR < dRmin  ){
-		dRmin = dR;
-	//	match =k;
-    id_ = hit_it->id();
+			for( unsigned int iNeighbour2=0; iNeighbour2< ((rcs[match]->neighbours8()[maxEIndex])->neighbours8()).size(); iNeighbour2++ ){
+
+
+				totalE = totalE + ((rcs[match]->neighbours8()[maxEIndex])->neighbours8())[iNeighbour2]->energy();
+				std::cout << "[INFO] 		Addding Rechit  "<< iNeighbour2 << "gives "<< totalE << std::endl;
+
+			}
+
+
+
+		}  else {
+
+			totalE = totalE + rcs[match]->energy();
+			std::cout << "[INFO] 		Addding Rechit 0 " << "gives "<< totalE << std::endl;
+
+			for( unsigned int iNeighbour2=0; iNeighbour2< (rcs[match]->neighbours8()).size(); iNeighbour2++ ){
+
+
+				totalE = totalE + (rcs[match]->neighbours8())[iNeighbour2]->energy();
+
+				std::cout << "[INFO] 		Addding Rechit  "<< iNeighbour2 << "gives "<< totalE << std::endl;
+			}
+
+		}
+
+		std::cout << "[INFO] Layer "<< iLayer  << " subtotal "<< totalE << std::endl;
+
 	}
-//k++;
-}
- //decode position
- //uint32_t recoDetId(recHits->find(id_)->id());
+	//decode position
+	//uint32_t recoDetId(recHits->find(id_)->id());
 
- //const GlobalPoint refPos( std::move( geom->getPosition(recoDetId) ) );
- int layer( ((id_ >> 19) & 0x1f) );// + layerCtrOffset-1 );
+	//const GlobalPoint refPos( std::move( geom->getPosition(recoDetId) ) );
+	//int layer( ((rcs[match]->detId() >> 19) & 0x1f) );// + layerCtrOffset-1 );
 
+	//int hgc_layer = HGCEEDetId(rcs[match]->detId()).layer();
+	//refPos= geom->getPosition(id_) ;
 
-refPos= geom->getPosition(id_) ;
+	//std::cout << "NEIGHOURS " << recHits->find(id_)->neighbours4()->size()<< std::endl;
+	if(match>-1){
+		std::cout << "SC E " << sc->energy()  << ", calculated E" << totalE  <<std::endl;
+		//	std::cout << "match rechit eta, phi, layer " << rcs[match]->positionREP().eta() << ", " <<rcs[match]->positionREP().eta()  << ", " << layer <<  std::endl;
+		//	std::cout << "match rechit eta, phi, layer (alt) " << rcs[match]->positionREP().eta() << ", " <<rcs[match]->positionREP().eta()  << ", " << hgc_layer <<  std::endl;
+	}
 
-//std::cout << "NEIGHOURS " << recHits->find(id_)->neighbours4()->size()<< std::endl;
-
-std::cout << "sc eta, phi " << eta << ", " << phi << std::endl;
-std::cout << "match rechit eta, phi, layer " << refPos.eta() << ", " << refPos.phi() << ", " << layer <<  std::endl;
-
-	return (eta+phi);				
+	return (totalE);				
 }
 
 
@@ -316,7 +383,7 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	/*	Handle<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> >  > HGCEERechits;
 			iEvent.getByToken(endcapRecHitCollection_,HGCEERechits);
 			iEvent.getByLabel(edm::InputTag("HGCalRecHit",hitCollections_[i]),recHits);*/
-//	const PtrVector<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >& rechits = recHits_->ptrVector();
+	//	const PtrVector<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >& rechits = recHits_->ptrVector();
 	std::cout << "RECHIT SIZE " << recHits_->size() << std::endl;
 
 	Handle<edm::View<reco::SuperCluster> > HGCEESCs;
@@ -331,9 +398,10 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	iEvent.getByToken(genParticlesCollection_,genParts);
 	const PtrVector<reco::GenParticle>& gens = genParts->ptrVector();
 
-	//	steco_over<< "[debug] number of rechits " << HGCEERechits->size() <<", SCs " << sclusters.size() << ", clusters " << clusters.size() << " gens " << gens.size() <<   std::endl;
+	Handle<edm::View<reco::PFRecHit> > eeRecHits;
+	iEvent.getByToken(eeRecHitCollection_, eeRecHits);
+	const PtrVector<reco::PFRecHit>& rcs = eeRecHits->ptrVector();
 
-	std::cout << "[DEBUG] 0" << std::endl;
 
 	// initialise tree entries
 	info.pt=-999.;
@@ -427,8 +495,8 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 			infoTruth.phiSC    = sclusters[infoTruth.matchIndex]->phi();
 			infoTruth.phiSeed  =sclusters[infoTruth.matchIndex]->seed()->phi();
 
-			float test = get3x3EmEnergy(  recHits_, clusters, sclusters[infoTruth.matchIndex], iSetup);
-				if (test) ;
+			float test = get3x3EmEnergy(  rcs, clusters, sclusters[infoTruth.matchIndex], iSetup);
+			if (test) ;
 
 			for (unsigned int ic =0 ; ic < sclusters[infoTruth.matchIndex]->clusters().size() ; ic++){
 				infoTruth.nClusters09 = ic+1; 
@@ -448,12 +516,12 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 
 			if(infoTruth.eReco_over_eTrue <0.7){
-				std::cout << "MATCH with eReco/eTrue <0.7" << std::endl;
-				std::cout << "_____|  RECO    |  TRUE    |" <<  std::endl;
-				std::cout << " eta | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->eta() <<" | "<< gens[igp]->eta()<< std::endl;
-				std::cout << " phi | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->phi() <<" | "<< gens[igp]->phi()<< std::endl;
-				std::cout << " e   | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->energy() <<" | "<< gens[igp]->energy()<< std::endl;
-				std::cout << " e   | " << std::setprecision(5) << infoTruth.eReco <<" | "<< infoTruth.eTrue<< std::endl;
+				/*		std::cout << "MATCH with eReco/eTrue <0.7" << std::endl;
+							std::cout << "_____|  RECO    |  TRUE    |" <<  std::endl;
+							std::cout << " eta | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->eta() <<" | "<< gens[igp]->eta()<< std::endl;
+							std::cout << " phi | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->phi() <<" | "<< gens[igp]->phi()<< std::endl;
+							std::cout << " e   | " << std::setprecision(5) << sclusters[infoTruth.matchIndex]->energy() <<" | "<< gens[igp]->energy()<< std::endl;
+							std::cout << " e   | " << std::setprecision(5) << infoTruth.eReco <<" | "<< infoTruth.eTrue<< std::endl;*/
 			}
 		}
 
@@ -477,7 +545,7 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		info.matchIndex=-999;
 		info.clustersSize=-999;
 
-		std::cout << " sc " << isc<< " eta " << sclusters[isc]->eta() << ", phi " << sclusters[isc]->phi()<< std::endl;
+		//	std::cout << " sc " << isc<< " eta " << sclusters[isc]->eta() << ", phi " << sclusters[isc]->phi()<< std::endl;
 
 		info.pt= sclusters[isc]->energy() /std::cosh(sclusters[isc]->eta());
 		info.eta=sclusters[isc]->eta();
@@ -526,8 +594,7 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		 }*/
 	/*		}
 				}
-				std::cout << "[DEBUG] 3" << std::endl;*/
-/*	if(sclusters.size()){
+	if(sclusters.size()){
 //	tree->Fill();
 //	dEta_h->Fill(info.eta[0]+info.eta[1]);
 //	dPhi_h->Fill(fabs(info.phi[0]-info.phi[1]));
