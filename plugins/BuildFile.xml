@@ -26,6 +26,7 @@
 <use name="MagneticField/Engine"/>
 <use name="DataFormats/JetReco"/>
 <use name="UserCode/HGCanalysis"/>
+<use name="RecoEgamma/EgammaElectronAlgos"/>
 <use name="geant4core"/>
 <use name="root"/>
 <flags EDM_PLUGIN="1"/>
