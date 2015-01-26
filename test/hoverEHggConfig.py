@@ -96,7 +96,7 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 #load the analyzer
 import getpass
@@ -113,6 +113,7 @@ process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
 												genParticlesTag =  cms.untracked.InputTag("genParticles"),
 												hcalTowers = cms.InputTag("towerMaker"),
+												eeRecHitCollection = cms.untracked.InputTag("particleFlowRecHitHGCEELC"),
 												hOverEPtMin = cms.double(2.),
 												hOverEMethodEndcap = cms.int32(3),
 												hOverEConeSize = cms.double(0.15),
@@ -122,6 +123,7 @@ process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
 
 #run it
 process.p = cms.Path(#process.analysis
+                     process.particleFlowRecHitHGCEELC*
 										 process.hgg
 )
 

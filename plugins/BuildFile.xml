@@ -27,6 +27,7 @@
 <use name="DataFormats/JetReco"/>
 <use name="UserCode/HGCanalysis"/>
 <use name="RecoEgamma/EgammaElectronAlgos"/>
+<use name="RecoEcal/EgammaClusterAlgos"/>
 <use name="geant4core"/>
 <use name="root"/>
 <flags EDM_PLUGIN="1"/>

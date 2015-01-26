@@ -56,9 +56,7 @@ class ElectronHcalHelper ;
 #include "Geometry/CaloTopology/interface/CaloTopology.h"
 #include "RecoCaloTools/MetaCollections/interface/CaloRecHitMetaCollections.h"
 #include "RecoCaloTools/Selectors/interface/CaloDualConeSelector.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
-
+#include "RecoEcal/EgammaClusterAlgos/interface/HGCALShowerBasedEmIdentificationLC.h"
 
 using namespace std;
 
@@ -89,6 +87,9 @@ struct infoTruth_t {
 	float etaWidth;
 	int clustersSize;
 	int nClusters09;
+	float sigmaEtaEta;
+	float showerStartPos;
+	float lengthCompatibility;
 
 };
 
@@ -103,6 +104,9 @@ struct info_t {
 	float  eReco_over_eTrue;
 	float mass;
 	int clustersSize;
+	float sigmaEtaEta;
+	float showerStartPos;
+	float lengthCompatibility;
 };
 
 // .h class info
@@ -113,6 +117,7 @@ class HoverEAnalyzer : public edm::EDAnalyzer {
 
 		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 		
+    double fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::PtrVector<reco::PFRecHit>& rcs);
 		float resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc, const edm::PtrVector<reco::PFCluster>& clusters);
 		float clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c, const edm::PtrVector<reco::PFCluster>& clusters);
 
@@ -212,6 +217,9 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	tree->Branch("eTrue"              ,&info.eTrue            ,"eTrue/F");
 	tree->Branch("matchIndex"              ,&info.matchIndex            ,"matchIndex/I");
 	tree->Branch("clustersSize"              ,&info.clustersSize            ,"clustersSize/I");
+	tree->Branch("sigmaEtaEta"              ,&info.sigmaEtaEta            ,"sigmaEtaEta/F");
+	tree->Branch("showerStartPos"              ,&info.showerStartPos        ,"showerStartPos/F");
+	tree->Branch("lengthCompatibility"              ,&info.lengthCompatibility       ,"lengthCompatibility/F");
 
 	treeTruth = fs_->make<TTree>("treeTruth","");
 	treeTruth->Branch("pt"              ,&infoTruth.pt            ,"pt/F");
@@ -232,6 +240,9 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	treeTruth->Branch("nClusters09"              ,&infoTruth.nClusters09           ,"nClusters09/I");
 	treeTruth->Branch("etaWidth"              ,&infoTruth.etaWidth             ,"etaWidth/F");
 	treeTruth->Branch("phiWidth"              ,&infoTruth.phiWidth             ,"phiWidth/F");
+	treeTruth->Branch("sigmaEtaEta"              ,&infoTruth.sigmaEtaEta            ,"sigmaEtaEta/F");
+	treeTruth->Branch("showerStartPos"              ,&infoTruth.showerStartPos        ,"showerStartPos/F");
+	treeTruth->Branch("lengthCompatibility"              ,&infoTruth.lengthCompatibility       ,"lengthCompatibility/F");
 }
 
 // destructor
@@ -246,6 +257,30 @@ HoverEAnalyzer::~HoverEAnalyzer()
 //
 
 // ------------ method called for each event  ------------
+double HoverEAnalyzer::fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::PtrVector<reco::PFRecHit>& rcs){
+	
+HGCALShowerBasedEmIdentificationLC test(0);
+//test.setShowerPosition(sc->seed()->position());
+
+		double see = 0;
+		for (unsigned int j =0 ; j < clusters.size() ; j++){
+
+			if (clusters[j]->position()==(sc->seed()->position())) {
+			//	std::cout << " HOVERE rcs size " << rcs.size() << std::endl;
+				//		std::cout << "TEST, corresponding cluster " << (clusters[j]->emEnergy()) << std::endl;
+				see =  test.HGCALShowerBasedEmIdentificationLC::sigmaetaeta( *(clusters[j].get()), rcs);
+				infoTruth.sigmaEtaEta = see;
+				infoTruth.sigmaEtaEta = test.HGCALShowerBasedEmIdentificationLC::sigmaetaeta( *(clusters[j].get()), rcs);
+				infoTruth.lengthCompatibility = test.HGCALShowerBasedEmIdentificationLC::lengthCompatibility( *(clusters[j].get()), rcs);
+				infoTruth.showerStartPos = fabs(test.HGCALShowerBasedEmIdentificationLC::startPosition( *(clusters[j].get()), rcs).z());
+				std::cout << " sieie " <<infoTruth.sigmaEtaEta << ", lC " <<infoTruth.lengthCompatibility  << " ,ssp " <<	infoTruth.showerStartPos << std::endl;
+
+				break;
+			}
+		}
+
+	return see;
+}
 
 float HoverEAnalyzer::resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters){
 
@@ -377,6 +412,10 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		infoTruth.etaWidth=-999.;
 		infoTruth.phiWidth=-999.;
 
+	infoTruth.sigmaEtaEta=-999.;
+	infoTruth.showerStartPos=-999.;
+	infoTruth.lengthCompatibility=-999.;
+
 		if (gens[igp]->pdgId() != 22 || gens[igp]->status() != 3) continue;
 		assert(gens.size() >0); // only the case for the electron gun sample
 		infoTruth.eta=gens[igp]->eta();
@@ -426,9 +465,11 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 			if ( detector==HGCEE) {
 	 //std::vector<float> locCov = EcalClusterTools::localCovariances( *(sclusters[infoTruth.matchIndex]->seed().get()), &(*eeRecHits), &(*caloTopo_));	
-	 std::vector<float> locCov = EcalClusterTools::localCovariances( *(sclusters[infoTruth.matchIndex]->seed().get()), (const edm::SortedCollection<EcalRecHit>*) &(*HGCEERechits), &(*caloTopo_));	
-	 std::cout << "sigmaIeIE " << sqrt((locCov.size())) << std::endl ;
-	 if (rcs.size()) ;
+//	 std::vector<float> locCov = EcalClusterTools::localCovariances( *(sclusters[infoTruth.matchIndex]->seed().get()), (const edm::SortedCollection<EcalRecHit>*) &(*HGCEERechits), &(*caloTopo_));	
+	
+	
+ double sieie =  fillEmIdVars(sclusters[infoTruth.matchIndex], clusters, rcs);	
+	std::cout << "sigmaIeIE " << sieie  << std::endl ;
 		
 			std::cout << "test -1" << std::endl;
 		 const auto & scl = (*HGCEESCs)[infoTruth.matchIndex] ;
