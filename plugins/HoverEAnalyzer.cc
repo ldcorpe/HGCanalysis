@@ -50,11 +50,15 @@ class ElectronHcalHelper ;
 
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/Records/interface/CaloTopologyRecord.h"
-#include "Geometry/CaloTopology/interface/CaloTopology.h"
-#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
-#include "Geometry/CaloTopology/interface/CaloTowerConstituentsMap.h"
 #include "RecoCaloTools/Selectors/interface/CaloConeSelector.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/CaloTopology/interface/CaloTopology.h"
+#include "RecoCaloTools/MetaCollections/interface/CaloRecHitMetaCollections.h"
+#include "RecoCaloTools/Selectors/interface/CaloDualConeSelector.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
+
 
 using namespace std;
 
@@ -91,6 +95,7 @@ struct infoTruth_t {
 struct info_t {
 	float pt;
 	float eta;
+	float hoe;
 	float phi;
 	float eReco;
 	float eTrue;
@@ -133,6 +138,7 @@ class HoverEAnalyzer : public edm::EDAnalyzer {
 		edm::EDGetTokenT<edm::View<reco::SuperCluster> >endcapSuperClusterCollection_;
 		edm::EDGetTokenT<edm::View<reco::PFCluster> >endcapClusterCollection_     ;
 		edm::EDGetTokenT<edm::View<reco::GenParticle> >genParticlesCollection_     ;
+		edm::EDGetTokenT<edm::View<reco::PFRecHit> > eeRecHitCollection_     ;
 
 		TTree *tree;
 		TTree *treeTruth;
@@ -159,7 +165,9 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	endcapRecHitCollection_(consumes <edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >(iConfig.getUntrackedParameter<edm::InputTag>("endcapRecHitCollection",     edm::InputTag("HGCalRecHit:HGCEERecHits")))),
 	endcapSuperClusterCollection_(consumes <edm::View<reco::SuperCluster> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapSuperClusterCollection",edm::InputTag("particleFlowSuperClusterHGCEE")))),
 	endcapClusterCollection_(consumes <edm::View<reco::PFCluster> > (iConfig.getUntrackedParameter<edm::InputTag>("endcapClusterCollection",edm::InputTag("particleFlowClusterHGCEE")))),
-	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles"))))
+	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles")))),
+	eeRecHitCollection_(consumes <edm::View<reco::PFRecHit> > (iConfig.getUntrackedParameter<edm::InputTag>("eeRecHitCollection",edm::InputTag("particleFlowRecHitHGCEE:Cleaned"))))
+	
 {
 	ElectronHcalHelper::Configuration hcalCfgEndcap ;
 	hcalCfgEndcap.hOverEConeSize = iConfig.getParameter<double>("hOverEConeSize") ;
@@ -179,6 +187,8 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	
 	
 	edm::Service<TFileService> fs_;
+//	hoe_Sig_h         = fs_->make<TH1F>("hoe_Sig_h","hoe_Sig__h",1000,0,1);
+//	hoe_PU_h         = fs_->make<TH1F>("hoe_PU_h","hoe_PU__h",1000,0,1);
 	eta_h         = fs_->make<TH1F>("eta_h","eta_h",100,-5,5);
 	phi_h         = fs_->make<TH1F>("phi_h","phi_h",100,-5,5);
 	dEta_h        = fs_->make<TH1F>("dEta_h","dEta_h",1000,-1,1);
@@ -196,6 +206,7 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	tree->Branch("eReco_over_eTrue"              ,&info.eReco_over_eTrue             ,"eReco_over_eTrue/F");
 	tree->Branch("pt"              ,&info.pt             ,"pt/F");
 	tree->Branch("eta"              ,&info.eta             ,"eta/F");
+	tree->Branch("hoe"              ,&info.hoe            ,"hoe/F");
 	tree->Branch("phi"              ,&info.phi             ,"phi/F");
 	tree->Branch("eReco"              ,&info.eReco            ,"eReco/F");
 	tree->Branch("eTrue"              ,&info.eTrue            ,"eTrue/F");
@@ -308,6 +319,12 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	iEvent.getByToken(genParticlesCollection_,genParts);
 	const PtrVector<reco::GenParticle>& gens = genParts->ptrVector();
 
+
+	Handle<edm::View<reco::PFRecHit> > eeRecHits;
+	iEvent.getByToken(eeRecHitCollection_, eeRecHits);
+	const PtrVector<reco::PFRecHit>& rcs = eeRecHits->ptrVector();
+
+
 	//	steco_over<< "[debug] number of rechits " << HGCEERechits->size() <<", SCs " << sclusters.size() << ", clusters " << clusters.size() << " gens " << gens.size() <<   std::endl;
 
 	std::cout << "[DEBUG] 0" << std::endl;
@@ -408,12 +425,15 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			int detector = sclusters[infoTruth.matchIndex]->seed()->hitsAndFractions()[0].first.subdetId() ;
 
 			if ( detector==HGCEE) {
-		
+	 //std::vector<float> locCov = EcalClusterTools::localCovariances( *(sclusters[infoTruth.matchIndex]->seed().get()), &(*eeRecHits), &(*caloTopo_));	
+	 std::vector<float> locCov = EcalClusterTools::localCovariances( *(sclusters[infoTruth.matchIndex]->seed().get()), (const edm::SortedCollection<EcalRecHit>*) &(*HGCEERechits), &(*caloTopo_));	
+	 std::cout << "sigmaIeIE " << sqrt((locCov.size())) << std::endl ;
+	 if (rcs.size()) ;
 		
 			std::cout << "test -1" << std::endl;
-		  const auto & scl = (*HGCEESCs)[0] ;
+		 const auto & scl = (*HGCEESCs)[infoTruth.matchIndex] ;
 			std::cout << "test 0" << std::endl;
-		//	float had =hcalHelperEndcap_->HCALClustersBehindSC((*sclusters)[infoTruth.matchIndex]);
+			//float had =hcalHelperEndcap_->HCALClustersBehindSC((sclusters)[infoTruth.matchIndex]);
 			float had =hcalHelperEndcap_->HCALClustersBehindSC(scl);
 	//		float had =hcalHelperEndcap_->HCALClustersBehindSC(scl)
 			std::cout << "test 1" << std::endl;
@@ -464,6 +484,7 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 		info.eReco_over_eTrue=-999.;
 		info.pt=-999.;
+		info.hoe=-999.;
 		info.eta=-999.;
 		info.phi=-999.;
 		info.eReco=-999.;
@@ -484,6 +505,25 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		phi_h->Fill(info.phi);
 
 		float dRBest = 999.; // dR best is used to find the gen-reco match with smallest dR.
+			
+			
+			int detector = sclusters[isc]->seed()->hitsAndFractions()[0].first.subdetId() ;
+
+			if ( detector==HGCEE) {
+		
+		
+			std::cout << "test -1" << std::endl;
+		  const auto & scl = (*HGCEESCs)[isc] ;
+			std::cout << "test 0" << std::endl;
+	//	float had =hcalHelperEndcap_->HCALClustersBehindSC((*sclusters)[isc]);
+			float had =hcalHelperEndcap_->HCALClustersBehindSC(scl);
+	//		float had =hcalHelperEndcap_->HCALClustersBehindSC(scl)
+			std::cout << "test 1" << std::endl;
+
+			float  scle =  sclusters[isc]->energy();
+			float hoe =had/scle;
+			info.hoe = hoe;
+			}
 
 		// now loop over gen particles
 		for (unsigned int igp =0; igp < gens.size() ; igp++){ // igp = index_gen_particles

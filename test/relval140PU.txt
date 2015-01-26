@@ -1,0 +1,11 @@
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/042EB6FE-09A1-E411-83A5-0025905A6064.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/1851D655-10A1-E411-BA43-0025905A60A0.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/1A3BBC77-03A1-E411-8EA5-0025905A60E0.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/1A951A1C-0BA1-E411-A678-002590596484.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/20817DD3-12A1-E411-A934-0025905B8610.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/225A9300-36A1-E411-A7C2-0025905822B6.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/240DC13D-11A1-E411-B74B-00261894394D.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/2C83385F-09A1-E411-A1FB-0025905A60BC.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/3266B1E1-1AA1-E411-A62A-0025905A613C.root
+root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-DIGI-RAW/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/326F5C5F-0CA1-E411-B90F-0025905A60F2.root
+

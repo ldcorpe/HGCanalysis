@@ -6,20 +6,20 @@ process = cms.Process("HGCSimHitsAnalysis")
 #process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')    
 process.load('FWCore.MessageService.MessageLogger_cfi')
 #v6 geometry
-#process.load('Configuration.Geometry.GeometryExtended2023HGCalV6MuonReco_cff')
-#process.load('Configuration.Geometry.GeometryExtended2023HGCalV6Muon_cff')
+process.load('Configuration.Geometry.GeometryExtended2023HGCalV6MuonReco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023HGCalV6Muon_cff')
 #v5 geometry
-process.load('Configuration.Geometry.GeometryExtended2023HGCalMuonReco_cff')
-process.load('Configuration.Geometry.GeometryExtended2023HGCalMuon_cff')
+#process.load('Configuration.Geometry.GeometryExtended2023HGCalMuonReco_cff')
+#process.load('Configuration.Geometry.GeometryExtended2023HGCalMuon_cff')
 #v4 geometry
 #process.load('Configuration.Geometry.GeometryExtended2023HGCalV4MuonReco_cff')
 #process.load('Configuration.Geometry.GeometryExtended2023HGCalV4Muon_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
-process.load('Configuration.StandardSequences.Reconstruction_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
+#process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
+process.GlobalTag.globaltag = 'MC_39Y_V2::All'
 
 ## MessageLogger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
@@ -80,15 +80,12 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 
 #fileNames = open("LCFilenames.txt","r")
 fileNames = open("hovereFile.txt","r")
-#fileNames = open("relval140PU.txt","r")
 
 #process.GlobalTag.globaltag = 'auto:upgradePLS3'
 
 
 process.source = cms.Source("PoolSource",
                             #fileNames=cms.untracked.vstring("root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC22/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PH2_1K_FB_V6_UPGHGCalV5-v1/00000/1CC2630B-6A8F-E411-95D3-0025905A48BA.root"),
-														#fileNames=cms.untracked.vstring("/store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/0E088A59-4CA1-E411-98F6-003048FFD744.root"),
-
                             fileNames=cms.untracked.vstring(fileNames),
                             #fileNames=cms.untracked.vstring("file:HggRelval.root"),
                             #fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/private/HGCALreco3/CMSSW_6_2_0_SLHC22/src/Hgg0PU-1kEvents_1.root"),
@@ -104,7 +101,9 @@ whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHgg.root'))
-process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
+#process.load('RecoEgamma.EgammaElectronProducers.ecalDrivenElectronSeeds_cfi')
+process.load('TrackingTools.GsfTracking.GsfElectronTracking_cff')
+
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
                         #geometrySource   = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive',  'HGCalHEScintillatorSensitive')
@@ -121,7 +120,7 @@ process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
 
 
 #run it
-process.p = cms.Path(#process.analysis
-										 process.hgg
+process.p = cms.Path(process.ecalDrivenElectronSeeds
+										 #process.hgg
 )
 
