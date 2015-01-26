@@ -77,14 +77,14 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 #load the analyzer
 import getpass
 whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('HiStatsAMStyleHgg.root'))
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 weight_vec_ee_electrons = [0.080]

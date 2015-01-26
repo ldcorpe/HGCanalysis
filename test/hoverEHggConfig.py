@@ -5,6 +5,9 @@ process = cms.Process("HGCSimHitsAnalysis")
 #process.load('Configuration.StandardSequences.Services_cff')
 #process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')    
 process.load('FWCore.MessageService.MessageLogger_cfi')
+#v6 geometry
+#process.load('Configuration.Geometry.GeometryExtended2023HGCalV6MuonReco_cff')
+#process.load('Configuration.Geometry.GeometryExtended2023HGCalV6Muon_cff')
 #v5 geometry
 process.load('Configuration.Geometry.GeometryExtended2023HGCalMuonReco_cff')
 process.load('Configuration.Geometry.GeometryExtended2023HGCalMuon_cff')
@@ -12,6 +15,11 @@ process.load('Configuration.Geometry.GeometryExtended2023HGCalMuon_cff')
 #process.load('Configuration.Geometry.GeometryExtended2023HGCalV4MuonReco_cff')
 #process.load('Configuration.Geometry.GeometryExtended2023HGCalV4Muon_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
+process.load('Configuration.StandardSequences.Reconstruction_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
 
 ## MessageLogger
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
@@ -22,7 +30,6 @@ process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
-process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
@@ -74,8 +81,6 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 #fileNames = open("LCFilenames.txt","r")
 fileNames = open("newRecoFiles2.txt","r")
 
-from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
 #process.GlobalTag.globaltag = 'auto:upgradePLS3'
 
 
@@ -88,7 +93,7 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10000) )
 
 #load the analyzer
 import getpass
@@ -99,7 +104,7 @@ process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverE
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
-                          #geometrySource   = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive',  'HGCalHEScintillatorSensitive')
+                        #geometrySource   = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive',  'HGCalHEScintillatorSensitive')
 												endcapRecHitCollection = cms.untracked.InputTag("HGCalRecHit:HGCEERecHits"),
 												endcapSuperClusterCollection = cms.untracked.InputTag("particleFlowSuperClusterHGCEE"),
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
