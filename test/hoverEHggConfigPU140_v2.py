@@ -78,19 +78,48 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 #"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_8.root",
 #"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_9.root"))
 
-#fileNames = open("LCFilenames.txt","r")
-#fileNames = open("hovereFile.txt","r")
-fileNames = open("hovereFileCombined.txt","r")
-#fileNames = open("hovereFileQCD.txt","r")
-#fileNames = open("relval140PU.txt","r")
+process_ =0
+
+import os,sys
+if(len(sys.argv)>2):
+	#print sys.argv[2]
+	process_= int(sys.argv[2])
+	print 'index %d'%(process_)
+if (len(sys.argv) ==0):
+	print 'no index! default is 0'
+
+
+processList = ["HGG","ZEE","QCD"]
+#fileNames
+if(process_ ==0): 
+	with open('sample/140PU/Hgg.txt','r') as f:
+		fileNames = f.readlines()
+
+if(process_ ==1): 
+	with open('sample/140PU/Zee.txt','r') as f:
+		fileNames = f.readlines()
+
+
+if(process_ ==2): 
+	with open('sample/140PU/Qcd.txt','r') as f:
+		fileNames = f.readlines()
+
+tot = len(fileNames)
+N= tot/3
+
 
 #process.GlobalTag.globaltag = 'auto:upgradePLS3'
 
+print 'processing %s files'%(processList[process_])
+#print '%d, %s'%(process_*N, ((process_+1)*(N)-1))
+for x in range(0,tot):
+	print fileNames[x]
 
 process.source = cms.Source("PoolSource",
                             #fileNames=cms.untracked.vstring("root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC22/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PH2_1K_FB_V6_UPGHGCalV5-v1/00000/1CC2630B-6A8F-E411-95D3-0025905A48BA.root"),
 														#fileNames=cms.untracked.vstring("/store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/0E088A59-4CA1-E411-98F6-003048FFD744.root"),
 
+                            #fileNames=cms.untracked.vstring(fileNames[process_*N:((process_+1)*(N)-1)]),
                             fileNames=cms.untracked.vstring(fileNames),
                             #fileNames=cms.untracked.vstring("file:HggRelval.root"),
                             #fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/private/HGCALreco3/CMSSW_6_2_0_SLHC22/src/Hgg0PU-1kEvents_1.root"),
@@ -98,7 +127,7 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 
 #load the analyzer
 import getpass
@@ -106,7 +135,7 @@ whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggQCD.root'))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggAll.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggPU140_%s.root'%(processList[process_])))
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
@@ -122,9 +151,8 @@ process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
 												hOverEMethodEndcap = cms.int32(3),
 												hOverEConeSize = cms.double(0.15),
 												endcapHCALClusters= cms.InputTag("particleFlowClusterHGCHEF"),
-												PU = cms.int32(0),
-												process_ = cms.int32(-1),
-												
+												PU = cms.int32(140),
+												process_ = cms.int32(process_)
                           )
 
 

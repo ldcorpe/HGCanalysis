@@ -80,9 +80,19 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 
 #fileNames = open("LCFilenames.txt","r")
 #fileNames = open("hovereFile.txt","r")
-fileNames = open("hovereFileCombined.txt","r")
+fileNames = open("hovereFileCombinedPU140.txt","r")
 #fileNames = open("hovereFileQCD.txt","r")
 #fileNames = open("relval140PU.txt","r")
+
+process_ =0
+
+import os,sys
+if(len(sys.argv)>2):
+	#print sys.argv[2]
+	process_= int(sys.argv[2])
+	print 'index %d'%(process_)
+if (len(sys.argv) ==0):
+	print 'no index! default is 0'
 
 #process.GlobalTag.globaltag = 'auto:upgradePLS3'
 
@@ -94,11 +104,11 @@ process.source = cms.Source("PoolSource",
                             fileNames=cms.untracked.vstring(fileNames),
                             #fileNames=cms.untracked.vstring("file:HggRelval.root"),
                             #fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/private/HGCALreco3/CMSSW_6_2_0_SLHC22/src/Hgg0PU-1kEvents_1.root"),
-                            skipEvents=cms.untracked.uint32(0))
+                            skipEvents=cms.untracked.uint32(process_*500+250))
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(150) )
 
 #load the analyzer
 import getpass
@@ -106,7 +116,7 @@ whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggQCD.root'))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggAll.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggPU140_%d_b_v2b.root'%(process_)))
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
@@ -122,9 +132,8 @@ process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
 												hOverEMethodEndcap = cms.int32(3),
 												hOverEConeSize = cms.double(0.15),
 												endcapHCALClusters= cms.InputTag("particleFlowClusterHGCHEF"),
-												PU = cms.int32(0),
-												process_ = cms.int32(-1),
-												
+												PU = cms.int32(140),
+												process_ = cms.int32(process_)
                           )
 
 
