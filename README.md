@@ -1,5 +1,10 @@
 # HGCanalysis scripts
 
+## For use of filter only for quickie PandoraPFA studies
+
+git clone https://github.com/sethzenz/HGCanalysis.git UserCode/HGCanalysis
+git checkout origin/hacked-interactions-filter
+
 ## Installation 
 
 To add to your cmssw area
