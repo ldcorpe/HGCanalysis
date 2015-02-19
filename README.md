@@ -2,8 +2,10 @@
 
 ## For use of filter only for quickie PandoraPFA studies
 
+cd ${CMSSW_BASE}/src
 git clone https://github.com/sethzenz/HGCanalysis.git UserCode/HGCanalysis
 git checkout origin/hacked-interactions-filter
+cd Usercode ; scram b -j 9
 
 ## Installation 
 
