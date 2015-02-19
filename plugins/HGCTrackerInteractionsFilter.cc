@@ -34,7 +34,7 @@ bool HGCTrackerInteractionsFilter::filter(edm::Event &iEvent, const edm::EventSe
   edm::Handle<std::vector<int> > genBarcodes;
   iEvent.getByLabel("genParticles",genBarcodes);  
   
-
+  /*
   //ready to roll and loop over generator level particles
   size_t nHitsBeforeHGC(0);
   for(size_t igen=0; igen<maxGenParts; igen++)
@@ -49,6 +49,26 @@ bool HGCTrackerInteractionsFilter::filter(edm::Event &iEvent, const edm::EventSe
   
   bool accept(nHitsBeforeHGC<maxGenParts);
   cout << "For " << maxGenParts << " analyzed found " << nHitsBeforeHGC << " interacting in tracker => decision=" << accept << endl;
+  */
+
+  //ready to roll and loop over generator level particles
+  size_t nHitsBeforeHGC(0);
+  for(size_t igen=0; igen<maxGenParts; igen++)
+    {
+      //mc truth
+      //const reco::GenParticle & p = (*genParticles)[igen];
+
+      //sim tracks and vertices      
+      math::XYZVectorD hitPos=getInteractionPosition(SimTk.product(),SimVtx.product(),genBarcodes->at(igen)).pos;
+      const double z = std::abs(hitPos.z());
+      nHitsBeforeHGC += (unsigned)(z < 317 && z > 1e-3);
+    }
+  
+  bool accept(nHitsBeforeHGC == 0); // require *no* interactions
+  cout << "For " << maxGenParts << " analyzed found " << nHitsBeforeHGC << " interacting in tracker => decision=" << accept << endl;
+  return accept;
+
+
   return accept;
 }
 

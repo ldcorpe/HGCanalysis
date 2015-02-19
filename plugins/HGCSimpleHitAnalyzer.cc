@@ -114,7 +114,8 @@ void HGCSimpleHitAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSet
 	    int ieta   = detId.ietaAbs();
 	    int iphi   = detId.iphi();
 	    int layer  = detId.depth();
-	    std::pair<double,double> etaphi = hcalDDD_->getEtaPhi(subdet,ieta,iphi);
+	    std::cout << "SCZ inserted nonsense so that code he isn't planning to use would compile " << ieta << " " << iphi << std::endl;
+	    std::pair<double,double> etaphi = std::make_pair(0.,0.);// hcalDDD_->getEtaPhi(subdet,ieta,iphi);
 	    float hit_eta(etaphi.first);
 	    float hit_phi(etaphi.second);
 
