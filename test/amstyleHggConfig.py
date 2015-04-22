@@ -6,11 +6,11 @@ process.load('Configuration.StandardSequences.Services_cff')
 process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')    
 process.load('FWCore.MessageService.MessageLogger_cfi')
 #v5 geometry
-#process.load('Configuration.Geometry.GeometryExtended2023HGCalMuonReco_cff')
-#process.load('Configuration.Geometry.GeometryExtended2023HGCalMuon_cff')
+process.load('Configuration.Geometry.GeometryExtended2023HGCalMuonReco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023HGCalMuon_cff')
 #v4 geometry
-process.load('Configuration.Geometry.GeometryExtended2023HGCalV4MuonReco_cff')
-process.load('Configuration.Geometry.GeometryExtended2023HGCalV4Muon_cff')
+#process.load('Configuration.Geometry.GeometryExtended2023HGCalV4MuonReco_cff')
+#process.load('Configuration.Geometry.GeometryExtended2023HGCalV4Muon_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 
 ## MessageLogger
@@ -66,7 +66,9 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 #"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_9.root"))
 
 #fileNames = open("LCFilenames.txt","r")
-fileNames = open("newRecoFiles2.txt","r")
+#fileNames = open("newRecoFiles2.txt","r")#
+fileNames = open("sample/140PU/Hgg.txt","r")
+#fileNames = open("sample/0PU/HGG.txt","r")
 
 process.source = cms.Source("PoolSource",
                             #fileNames=cms.untracked.vstring("root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC22/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PH2_1K_FB_V6_UPGHGCalV5-v1/00000/1CC2630B-6A8F-E411-95D3-0025905A48BA.root"),
@@ -77,14 +79,14 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 #load the analyzer
 import getpass
 whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC.root'))
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 weight_vec_ee_electrons = [0.080]
@@ -99,7 +101,7 @@ process.hgg = cms.EDAnalyzer("AMStyleHggAnalyser",
 												endcapRecHitCollection = cms.untracked.InputTag("HGCalRecHit:HGCEERecHits"),
 												endcapSuperClusterCollection = cms.untracked.InputTag("particleFlowSuperClusterHGCEE"),
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
-												eeRecHitCollection = cms.untracked.InputTag("particleFlowRecHitHGCEELC"),
+										#		eeRecHitCollection = cms.untracked.InputTag("particleFlowRecHitHGCEELC"),
 												genParticlesTag =  cms.untracked.InputTag("genParticles"),
 												weights_ee = cms.vdouble(weight_vec_ee_electrons),
 												hgcOverburdenParamFile = cms.FileInPath('RecoParticleFlow/PFClusterProducer/data/HGCMaterialOverburden.root')
@@ -109,7 +111,7 @@ process.hgg = cms.EDAnalyzer("AMStyleHggAnalyser",
 
 #run it
 process.p = cms.Path(#process.analysi
-										 process.particleFlowRecHitHGCEELC*
+										# process.particleFlowRecHitHGCEELC*
 										 process.hgg
 
 )

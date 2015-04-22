@@ -98,7 +98,7 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
 
 #load the analyzer
 import getpass
@@ -106,7 +106,7 @@ whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggQCD.root'))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggAll.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggTest.root'))
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",

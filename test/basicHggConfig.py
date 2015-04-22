@@ -62,12 +62,15 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 #"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_9.root"))
 
 #fileNames = open("LCFilenames.txt","r")
-fileNames = open("newRecoFiles3.txt","r")
+#fileNames = open("newRecoFiles3.txt","r")
+fileNames = open("sample/0PU/HGG.txt","r")
+#fileNames = open("sample/140PU/Hgg.txt","r")
 
 process.source = cms.Source("PoolSource",
                             #fileNames=cms.untracked.vstring("root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC22/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PH2_1K_FB_V6_UPGHGCalV5-v1/00000/1CC2630B-6A8F-E411-95D3-0025905A48BA.root"),
-                            #fileNames=cms.untracked.vstring(fileNames),
-                            fileNames=cms.untracked.vstring("file:../../../sample/0PU/Hgg0PU-2kEvents_0_KEEP.root"),
+                            fileNames=cms.untracked.vstring(fileNames),
+                            #fileNames=cms.untracked.vstring("file:../../../sample/0PU/Hgg0PU-2kEvents_0_KEEP.root"),
+                            #fileNames=cms.untracked.vstring("/store/relval/CMSSW_6_2_0_SLHC23_patch1/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PU_PH2_1K_FB_V6_HGCalV5PU140-v5/00000/0E088A59-4CA1-E411-98F6-003048FFD744.root"),
                             #fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/private/HGCALreco3/CMSSW_6_2_0_SLHC22/src/Hgg0PU-1kEvents_1.root"),
                             skipEvents=cms.untracked.uint32(0))
 
@@ -80,7 +83,7 @@ import getpass
 whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicHggPatch2.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('BasicHggPatch2_lc0PU_2abs.root'))
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("BasicHggAnalyser",

@@ -36,6 +36,7 @@ class ElectronHcalHelper ;
 #include "DataFormats/ParticleFlowReco/interface/PFRecHitFwd.h"
 #include "DataFormats/ParticleFlowReco/interface/PFRecHit.h"
 #include "DataFormats/ForwardDetId/interface/HGCEEDetId.h"
+#include "DataFormats/ForwardDetId/interface/HGCHEDetId.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "RecoEgamma/EgammaElectronAlgos/interface/ElectronHcalHelper.h"
 
@@ -79,6 +80,8 @@ struct infoTruth_t {
 	float phiSeed;
 	int matchIndex;
 	float pt;
+	float recopt;
+	float et;
 	float eTrue;
 	float eReco;
 	float hoe;
@@ -93,13 +96,23 @@ struct infoTruth_t {
 	float lengthCompatibilityNoDir;
 	float sigmaEtaEta;
 	float showerStartPos;
+	float showerStartPos3;
 	float lengthCompatibility;
+	float firstLayerWith99;
+	float firstLayerWith95;
+	float firstLayerWith90;
+	float firstLayerWith68;
+	float firstLayerWith99Pedro;
+	float firstLayerWith95Pedro;
+	float firstLayerWith90Pedro;
+	float firstLayerWith68Pedro;
 	int iProcess;
 
 };
 
 struct info_t {
 	float pt;
+	float et;
 	float eta;
 	float hoe;
 	float phi;
@@ -111,7 +124,16 @@ struct info_t {
 	int clustersSize;
 	float sigmaEtaEta;
 	float showerStartPos;
+	float showerStartPos3;
 	float lengthCompatibility;
+	float firstLayerWith99Pedro;
+	float firstLayerWith95Pedro;
+	float firstLayerWith90Pedro;
+	float firstLayerWith68Pedro;
+	float firstLayerWith99;
+	float firstLayerWith95;
+	float firstLayerWith90;
+	float firstLayerWith68;
 	int iProcess;
 };
 
@@ -123,8 +145,9 @@ class HoverEAnalyzer : public edm::EDAnalyzer {
 
 		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
-		double fillEmIdVarsNoDir(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::SortedCollection<HGCRecHit>& rcs, const HGCalGeometry *geom );
-		double fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::SortedCollection<HGCRecHit>& rcs, const HGCalGeometry *geom );
+	//	double fillEmIdVarsNoDir(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::SortedCollection<HGCRecHit>& rcs, const HGCalGeometry *geom );
+		double fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::SortedCollection<HGCRecHit>& rcs, const  edm::SortedCollection<HGCRecHit>& rcsHEF, const HGCalGeometry *geom );
+		double fillEmIdVarsHiPU(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::SortedCollection<HGCRecHit>& rcs, const edm::SortedCollection<HGCRecHit>&  rcsHEF, 	const HGCalGeometry *geom );
 		float resumEmEnergy(const edm::Ptr<reco::SuperCluster>& sc, const edm::PtrVector<reco::PFCluster>& clusters);
 		float clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c, const edm::PtrVector<reco::PFCluster>& clusters);
 
@@ -147,6 +170,7 @@ class HoverEAnalyzer : public edm::EDAnalyzer {
 		edm::ESHandle<CaloTopology> caloTopo_;
 		unsigned long long caloTopoCacheId_;
 		edm::EDGetTokenT<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >endcapRecHitCollection_      ; 
+		edm::EDGetTokenT<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > >endcapRecHitCollectionHEF_      ; 
 		edm::EDGetTokenT<edm::View<reco::SuperCluster> >endcapSuperClusterCollection_;
 		edm::EDGetTokenT<edm::View<reco::PFCluster> >endcapClusterCollection_     ;
 		edm::EDGetTokenT<edm::View<reco::GenParticle> >genParticlesCollection_     ;
@@ -155,8 +179,42 @@ class HoverEAnalyzer : public edm::EDAnalyzer {
 
 		int PU;
 		int process;
+		int genMatchPU;
 
+		TH1F *flw99_hgg_h; 
+		TH1F *flw99_zee_h; 
+		TH1F *flw99_qcd_h; 
 
+		TH1F *flw95_hgg_h; 
+		TH1F *flw95_zee_h; 
+		TH1F *flw95_qcd_h; 
+
+		TH1F *flw90_hgg_h; 
+		TH1F *flw90_zee_h; 
+		TH1F *flw90_qcd_h; 
+		
+		TH1F *flw68_hgg_h; 
+		TH1F *flw68_zee_h; 
+		TH1F *flw68_qcd_h; 
+		
+		TH1F *flwX099_hgg_h; 
+		TH1F *flwX099_zee_h; 
+		TH1F *flwX099_qcd_h; 
+
+		TH1F *flwX095_hgg_h; 
+		TH1F *flwX095_zee_h; 
+		TH1F *flwX095_qcd_h; 
+
+		TH1F *flwX090_hgg_h; 
+		TH1F *flwX090_zee_h; 
+		TH1F *flwX090_qcd_h; 
+		
+		
+		TH1F *flwX068_hgg_h; 
+		TH1F *flwX068_zee_h; 
+		TH1F *flwX068_qcd_h; 
+		
+		
 		TH1F *hoe_hgg_h; 
 		TH1F *hoe_zee_h; 
 		TH1F *hoe_qcd_h; 
@@ -167,7 +225,11 @@ class HoverEAnalyzer : public edm::EDAnalyzer {
 
 		TH1F *ssz_hgg_h; 
 		TH1F *ssz_zee_h; 
-		TH1F *ssz_qcd_h; 
+		TH1F *ssz_qcd_h;
+
+		TH1F *ssz3_hgg_h; 
+		TH1F *ssz3_zee_h; 
+		TH1F *ssz3_qcd_h; 
 
 		TH1F *lcp_hgg_h; 
 		TH1F *lcp_zee_h; 
@@ -197,6 +259,7 @@ class HoverEAnalyzer : public edm::EDAnalyzer {
 HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	hcalHelperEndcap_(0), caloGeom_(0), caloGeomCacheId_(0), caloTopo_(0), caloTopoCacheId_(0),
 	endcapRecHitCollection_(consumes  <edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > > (iConfig.getUntrackedParameter<edm::InputTag>("endcapRecHitCollection",     edm::InputTag("HGCalRecHit:HGCEERecHits")))),
+	endcapRecHitCollectionHEF_(consumes  <edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> > > (iConfig.getUntrackedParameter<edm::InputTag>("endcapRecHitCollectionHEF",     edm::InputTag("HGCalRecHit:HGCHEFRecHits")))),
 	endcapSuperClusterCollection_(consumes <edm::View<reco::SuperCluster> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapSuperClusterCollection",edm::InputTag("particleFlowSuperClusterHGCEE")))),
 	endcapClusterCollection_(consumes <edm::View<reco::PFCluster> > (iConfig.getUntrackedParameter<edm::InputTag>("endcapClusterCollection",edm::InputTag("particleFlowClusterHGCEE")))),
 	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles")))),
@@ -210,6 +273,7 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	hcalCfgEndcap.hOverEMethod = iConfig.getParameter<int>("hOverEMethodEndcap") ;
 	PU  = iConfig.getParameter<int>("PU") ;
 	process  = iConfig.getParameter<int>("process_") ;
+	genMatchPU  = iConfig.getParameter<int>("genMatchPU_") ;
 	if (hcalCfgEndcap.hOverEConeSize>0)
 	{
 		hcalCfgEndcap.useTowers = true ;
@@ -239,6 +303,41 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	nClust90_v_eRoT_h        = fs_->make<TH2F>("nClust90_v_eRoT_h","nClust90_v_eRoT_h",100,0,10,100,0,1.3);
 	nSC_h        = fs_->make<TH1F>("nSC","nSC",100,0,100);
 
+
+	flwX099_hgg_h = fs_->make<TH1F>("flwX099_hgg_h","flwX099_hgg_h",100,300,350);
+	flwX099_zee_h = fs_->make<TH1F>("flwX099_zee_h","flwX099_zee_h",100,300,350);
+	flwX099_qcd_h = fs_->make<TH1F>("flwX099_qcd_h","flwX099_qcd_h",100,300,350);
+                                                          
+	flwX095_hgg_h = fs_->make<TH1F>("flwX095_hgg_h","flwX095_hgg_h",100,300,350);
+	flwX095_zee_h = fs_->make<TH1F>("flwX095_zee_h","flwX095_zee_h",100,300,350);
+	flwX095_qcd_h = fs_->make<TH1F>("flwX095_qcd_h","flwX095_qcd_h",100,300,350);
+                                                          
+	flwX090_hgg_h = fs_->make<TH1F>("flwX090_hgg_h","flwX090_hgg_h",100,300,350);
+	flwX090_zee_h = fs_->make<TH1F>("flwX090_zee_h","flwX090_zee_h",100,300,350);
+	flwX090_qcd_h = fs_->make<TH1F>("flwX090_qcd_h","flwX090_qcd_h",100,300,350);
+                                                          
+	flwX068_hgg_h = fs_->make<TH1F>("flwX068_hgg_h","flwX068_hgg_h",100,300,350);
+	flwX068_zee_h = fs_->make<TH1F>("flwX068_zee_h","flwX068_zee_h",100,300,350);
+	flwX068_qcd_h = fs_->make<TH1F>("flwX068_qcd_h","flwX068_qcd_h",100,300,350);
+
+
+	flw99_hgg_h = fs_->make<TH1F>("flw99_hgg_h","flw99_hgg_h",100,300,350);
+	flw99_zee_h = fs_->make<TH1F>("flw99_zee_h","flw99_zee_h",100,300,350);
+	flw99_qcd_h = fs_->make<TH1F>("flw99_qcd_h","flw99_qcd_h",100,300,350);
+                                                          
+	flw95_hgg_h = fs_->make<TH1F>("flw95_hgg_h","flw95_hgg_h",100,300,350);
+	flw95_zee_h = fs_->make<TH1F>("flw95_zee_h","flw95_zee_h",100,300,350);
+	flw95_qcd_h = fs_->make<TH1F>("flw95_qcd_h","flw95_qcd_h",100,300,350);
+                                                          
+	flw90_hgg_h = fs_->make<TH1F>("flw90_hgg_h","flw90_hgg_h",100,300,350);
+	flw90_zee_h = fs_->make<TH1F>("flw90_zee_h","flw90_zee_h",100,300,350);
+	flw90_qcd_h = fs_->make<TH1F>("flw90_qcd_h","flw90_qcd_h",100,300,350);
+                                                          
+	flw68_hgg_h = fs_->make<TH1F>("flw68_hgg_h","flw68_hgg_h",100,300,350);
+	flw68_zee_h = fs_->make<TH1F>("flw68_zee_h","flw68_zee_h",100,300,350);
+	flw68_qcd_h = fs_->make<TH1F>("flw68_qcd_h","flw68_qcd_h",100,300,350);
+
+
 	hoe_hgg_h = fs_->make<TH1F>("hoe_hgg_h","hoe_hgg_h",200,0,5);
 	hoe_zee_h = fs_->make<TH1F>("hoe_zee_h","hoe_zee_h",200,0,5);
 	hoe_qcd_h = fs_->make<TH1F>("hoe_qcd_h","hoe_qcd_h",200,0,5);
@@ -251,6 +350,10 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	ssz_zee_h = fs_->make<TH1F>("ssz_zee_h","ssz_zee_h",100,300,350);
 	ssz_qcd_h = fs_->make<TH1F>("ssz_qcd_h","ssz_qcd_h",100,300,350);
 
+	ssz3_hgg_h = fs_->make<TH1F>("ssz3_hgg_h","ssz3_hgg_h",100,300,350);
+	ssz3_zee_h = fs_->make<TH1F>("ssz3_zee_h","ssz3_zee_h",100,300,350);
+	ssz3_qcd_h = fs_->make<TH1F>("ssz3_qcd_h","ssz3_qcd_h",100,300,350);
+
 	lcp_hgg_h = fs_->make<TH1F>("lcp_hgg_h","lcp_hgg_h",200,-5,5);
 	lcp_zee_h = fs_->make<TH1F>("lcp_zee_h","lcp_zee_h",200,-5,5);
 	lcp_qcd_h = fs_->make<TH1F>("lcp_qcd_h","lcp_qcd_h",200,-5,5);
@@ -258,16 +361,19 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	hoe_hgg_h->SetLineColor(kRed);
 	see_hgg_h->SetLineColor(kRed);
 	ssz_hgg_h->SetLineColor(kRed);
+	ssz3_hgg_h->SetLineColor(kRed);
 	lcp_hgg_h->SetLineColor(kRed);
 
 	hoe_zee_h->SetLineColor(kGreen);
 	see_zee_h->SetLineColor(kGreen);
 	ssz_zee_h->SetLineColor(kGreen);
+	ssz3_zee_h->SetLineColor(kGreen);
 	lcp_zee_h->SetLineColor(kGreen);
 
 	hoe_qcd_h->SetLineColor(kBlue);
 	see_qcd_h->SetLineColor(kBlue);
 	ssz_qcd_h->SetLineColor(kBlue);
+	ssz3_qcd_h->SetLineColor(kBlue);
 	lcp_qcd_h->SetLineColor(kBlue);
 
 	hoe_hgg_h->Sumw2();
@@ -299,7 +405,16 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	tree->Branch("iProcess"              ,&info.iProcess         ,"iProcess/I");
 	tree->Branch("sigmaEtaEta"              ,&info.sigmaEtaEta            ,"sigmaEtaEta/F");
 	tree->Branch("showerStartPos"              ,&info.showerStartPos        ,"showerStartPos/F");
+	tree->Branch("showerStartPos3"              ,&info.showerStartPos3        ,"showerStartPos3/F");
 	tree->Branch("lengthCompatibility"              ,&info.lengthCompatibility       ,"lengthCompatibility/F");
+	tree->Branch("firstLayerWith99Pedro"              ,&info.firstLayerWith99Pedro       ,"firstLayerWith99Pedro/F");
+	tree->Branch("firstLayerWith95Pedro"              ,&info.firstLayerWith95Pedro       ,"firstLayerWith95Pedro/F");
+	tree->Branch("firstLayerWith90Pedro"              ,&info.firstLayerWith90Pedro       ,"firstLayerWith90Pedro/F");
+	tree->Branch("firstLayerWith68Pedro"              ,&info.firstLayerWith68Pedro       ,"firstLayerWith68Pedro/F");
+	tree->Branch("firstLayerWith99"              ,&info.firstLayerWith99       ,"firstLayerWith99/F");
+	tree->Branch("firstLayerWith95"              ,&info.firstLayerWith95       ,"firstLayerWith95/F");
+	tree->Branch("firstLayerWith90"              ,&info.firstLayerWith90       ,"firstLayerWith90/F");
+	tree->Branch("firstLayerWith68"              ,&info.firstLayerWith68       ,"firstLayerWith68/F");
 
 	treeTruth = fs_->make<TTree>("treeTruth","");
 	treeTruth->Branch("pt"              ,&infoTruth.pt            ,"pt/F");
@@ -322,12 +437,29 @@ HoverEAnalyzer::HoverEAnalyzer(const edm::ParameterSet& iConfig):
 	treeTruth->Branch("phiWidth"              ,&infoTruth.phiWidth             ,"phiWidth/F");
 	treeTruth->Branch("sigmaEtaEta"              ,&infoTruth.sigmaEtaEta            ,"sigmaEtaEta/F");
 	treeTruth->Branch("showerStartPos"              ,&infoTruth.showerStartPos        ,"showerStartPos/F");
+	treeTruth->Branch("showerStartPos3"              ,&infoTruth.showerStartPos3        ,"showerStartPos3/F");
 	treeTruth->Branch("lengthCompatibility"              ,&infoTruth.lengthCompatibility       ,"lengthCompatibility/F");
 	treeTruth->Branch("sigmaEtaEtaNoDir"              ,&infoTruth.sigmaEtaEtaNoDir            ,"sigmaEtaEtaNoDir/F");
 	treeTruth->Branch("showerStartPosNoDir"              ,&infoTruth.showerStartPosNoDir        ,"showerStartPosNoDir/F");
 	treeTruth->Branch("lengthCompatibilityNoDir"              ,&infoTruth.lengthCompatibilityNoDir       ,"lengthCompatibilityNoDir/F");
+	treeTruth->Branch("firstLayerWith99"              ,&infoTruth.firstLayerWith99       ,"firstLayerWith99/F");
+	treeTruth->Branch("firstLayerWith95"              ,&infoTruth.firstLayerWith95       ,"firstLayerWith95/F");
+	treeTruth->Branch("firstLayerWith90"              ,&infoTruth.firstLayerWith90       ,"firstLayerWith90/F");
+	treeTruth->Branch("firstLayerWith68"              ,&infoTruth.firstLayerWith68       ,"firstLayerWith68/F");
+	treeTruth->Branch("firstLayerWith99Pedro"              ,&infoTruth.firstLayerWith99Pedro       ,"firstLayerWith99Pedro/F");
+	treeTruth->Branch("firstLayerWith95Pedro"              ,&infoTruth.firstLayerWith95Pedro       ,"firstLayerWith95Pedro/F");
+	treeTruth->Branch("firstLayerWith90Pedro"              ,&infoTruth.firstLayerWith90Pedro       ,"firstLayerWith90Pedro/F");
+	treeTruth->Branch("firstLayerWith68Pedro"              ,&infoTruth.firstLayerWith68Pedro       ,"firstLayerWith68Pedro/F");
+
 	treeTruth->Branch("iProcess"              ,&infoTruth.iProcess         ,"iProcess/I");
 }
+
+
+
+
+
+
+
 
 // destructor
 HoverEAnalyzer::~HoverEAnalyzer()
@@ -341,35 +473,10 @@ HoverEAnalyzer::~HoverEAnalyzer()
 //
 
 // ------------ method called for each event  ------------
-double HoverEAnalyzer::fillEmIdVarsNoDir(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const edm::SortedCollection<HGCRecHit>&  rcs, 	const HGCalGeometry *geom ){
+double HoverEAnalyzer::fillEmIdVarsHiPU(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const edm::SortedCollection<HGCRecHit>&  rcs,const edm::SortedCollection<HGCRecHit>&  rcsHEF, 	 	const HGCalGeometry *geom ){
 
-	HGCALShowerBasedEmIdentificationLC2 test(0, geom);
-
-	double see = 0;
-	for (unsigned int j =0 ; j < clusters.size() ; j++){
-
-		if (clusters[j]->position()==(sc->seed()->position())) {
-			//	std::cout << " HOVERE rcs size " << rcs.size() << std::endl;
-			//		std::cout << "TEST, corresponding cluster " << (clusters[j]->emEnergy()) << std::endl;
-			// test.setShowerPosition(clusters[j]->position());
-			//test.setShowerDirection(clusters[j]->axis());
-			see =  test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
-			infoTruth.sigmaEtaEtaNoDir = see;
-			infoTruth.sigmaEtaEtaNoDir = test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
-			infoTruth.lengthCompatibilityNoDir = test.HGCALShowerBasedEmIdentificationLC2::lengthCompatibility( *(clusters[j].get()), rcs);
-			infoTruth.showerStartPosNoDir = fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
-
-			//	std::cout << " sieie " <<infoTruth.sigmaEtaEta << ", lC " <<infoTruth.lengthCompatibility  << " ,ssp " <<	infoTruth.showerStartPos << std::endl;
-
-			break;
-		}
-	}
-
-	return see;
-}
-double HoverEAnalyzer::fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const edm::SortedCollection<HGCRecHit>&  rcs, 	const HGCalGeometry *geom ){
-
-	HGCALShowerBasedEmIdentificationLC2 test(PU, geom);
+	//HGCALShowerBasedEmIdentificationLC2 test(PU, geom);
+	HGCALShowerBasedEmIdentificationLC2 test(1, geom);
 	//test.setShowerPosition(sc->seed()->position());
 	//test.setShowerDirection(sc->seed()->axis());
 
@@ -382,13 +489,102 @@ double HoverEAnalyzer::fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const
 			test.setShowerPosition(clusters[j]->position());
 			test.setShowerDirection(clusters[j]->axis());
 			see =  test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
+		//	see =  test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.95, *(clusters[j].get()), rcs);
+				/*		std::cout << "v1 " << infoTruth.firstLayerWith99 << ", v2 " <<  fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithv2( 0.99, *(clusters[j].get()),  rcs, rcsHEF)) << std::endl;
+					std::cout << 	", v3 " << std::endl;
+				//	info.firstLayerWith95 = fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+					std::cout << "V3 " <<infoTruth.firstLayerWith95 << std::endl;*/
+
+			infoTruth.firstLayerWith99= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		 // infoTruth.firstLayerWith95= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+		//	infoTruth.firstLayerWith90= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith68=  fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith99Pedro= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		 // infoTruth.firstLayerWith95Pedro= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+			//infoTruth.firstLayerWith90Pedro= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith68Pedro=  fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith99= infoTruth.firstLayerWith99;              // fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		  //nfo.firstLayerWith95= infoTruth.firstLayerWith95;   //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+		//	info.firstLayerWith90= infoTruth.firstLayerWith90;     //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith68= infoTruth.firstLayerWith68;        // fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith99Pedro= infoTruth.firstLayerWith99Pedro;              // fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		 // info.firstLayerWith95Pedro= infoTruth.firstLayerWith95Pedro;   //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+		//	info.firstLayerWith90Pedro= infoTruth.firstLayerWith90Pedro;     //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith68Pedro= infoTruth.firstLayerWith68Pedro;        // fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+
+			//std::cout << "firts layer with 95 " << infoTruth.firstLayerWith95 << std::endl;
+
 			info.sigmaEtaEta = see;
 			info.sigmaEtaEta = test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
 			info.lengthCompatibility = test.HGCALShowerBasedEmIdentificationLC2::lengthCompatibility( *(clusters[j].get()), rcs);
 			info.showerStartPos = fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
-			infoTruth.sigmaEtaEta = test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
+			infoTruth.showerStartPos = info.showerStartPos; //fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
+			info.showerStartPos3 = fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition3( *(clusters[j].get()), rcs).z());
+			infoTruth.showerStartPos3 = info.showerStartPos3; //fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
+		
+		
+		infoTruth.sigmaEtaEta = test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
 			infoTruth.lengthCompatibility = test.HGCALShowerBasedEmIdentificationLC2::lengthCompatibility( *(clusters[j].get()), rcs);
-			infoTruth.showerStartPos = fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
+			//		std::cout << " sieie " <<infoTruth.sigmaEtaEta << ", lC " <<infoTruth.lengthCompatibility  << " ,ssp " <<	infoTruth.showerStartPos << std::endl;
+
+			break;
+		}
+	}
+
+	return see;
+}
+double HoverEAnalyzer::fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const edm::SortedCollection<HGCRecHit>&  rcs, const edm::SortedCollection<HGCRecHit>&  rcsHEF, 	const HGCalGeometry *geom ){
+
+	//HGCALShowerBasedEmIdentificationLC2 test(PU, geom);
+	HGCALShowerBasedEmIdentificationLC2 test(1, geom);
+	//test.setShowerPosition(sc->seed()->position());
+	//test.setShowerDirection(sc->seed()->axis());
+
+	double see = 0;
+	for (unsigned int j =0 ; j < clusters.size() ; j++){
+
+		if (clusters[j]->position()==(sc->seed()->position())) {
+			//	std::cout << " HOVERE rcs size " << rcs.size() << std::endl;
+			//		std::cout << "TEST, corresponding cluster " << (clusters[j]->emEnergy()) << std::endl;
+			test.setShowerPosition(clusters[j]->position());
+			test.setShowerDirection(clusters[j]->axis());
+			see =  test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
+		//	see =  test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.95, *(clusters[j].get()), rcs);
+				/*		std::cout << "v1 " << infoTruth.firstLayerWith99 << ", v2 " <<  fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithv2( 0.99, *(clusters[j].get()),  rcs, rcsHEF)) << std::endl;
+					std::cout << 	", v3 " << std::endl;
+				//	info.firstLayerWith95 = fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+					std::cout << "V3 " <<infoTruth.firstLayerWith95 << std::endl;*/
+
+			infoTruth.firstLayerWith99= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		  infoTruth.firstLayerWith95= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith90= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith68=  fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWith( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith99Pedro= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		  infoTruth.firstLayerWith95Pedro= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith90Pedro= fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			infoTruth.firstLayerWith68Pedro=  fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith99= infoTruth.firstLayerWith99;              // fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		  info.firstLayerWith95= infoTruth.firstLayerWith95;   //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith90= infoTruth.firstLayerWith90;     //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith68= infoTruth.firstLayerWith68;        // fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith99Pedro= infoTruth.firstLayerWith99Pedro;              // fabs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.99, *(clusters[j].get()),  rcs, rcsHEF));
+		  info.firstLayerWith95Pedro= infoTruth.firstLayerWith95Pedro;   //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.95, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith90Pedro= infoTruth.firstLayerWith90Pedro;     //abs( test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.90, *(clusters[j].get()),  rcs, rcsHEF));
+			info.firstLayerWith68Pedro= infoTruth.firstLayerWith68Pedro;        // fabs(test.HGCALShowerBasedEmIdentificationLC2::firstLayerWithPedro( 0.68, *(clusters[j].get()),  rcs, rcsHEF));
+
+			//std::cout << "firts layer with 95 " << infoTruth.firstLayerWith95 << std::endl;
+
+			info.sigmaEtaEta = see;
+			info.sigmaEtaEta = test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
+			info.lengthCompatibility = test.HGCALShowerBasedEmIdentificationLC2::lengthCompatibility( *(clusters[j].get()), rcs);
+			info.showerStartPos = fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
+			infoTruth.showerStartPos = info.showerStartPos; //fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
+			info.showerStartPos3 = fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition3( *(clusters[j].get()), rcs).z());
+			infoTruth.showerStartPos3 = info.showerStartPos3; //fabs(test.HGCALShowerBasedEmIdentificationLC2::startPosition( *(clusters[j].get()), rcs).z());
+		
+		
+		infoTruth.sigmaEtaEta = test.HGCALShowerBasedEmIdentificationLC2::sigmaetaeta( *(clusters[j].get()), rcs);
+			infoTruth.lengthCompatibility = test.HGCALShowerBasedEmIdentificationLC2::lengthCompatibility( *(clusters[j].get()), rcs);
 			//		std::cout << " sieie " <<infoTruth.sigmaEtaEta << ", lC " <<infoTruth.lengthCompatibility  << " ,ssp " <<	infoTruth.showerStartPos << std::endl;
 
 			break;
@@ -459,6 +655,9 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		caloTopoCacheId_=iSetup.get<CaloTopologyRecord>().cacheIdentifier();
 		iSetup.get<CaloTopologyRecord>().get(caloTopo_);
 	}
+	Handle<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> >  > HGCHEFRechits_;
+	iEvent.getByToken(endcapRecHitCollectionHEF_,HGCHEFRechits_);
+	auto  HGCHEFRechits =HGCHEFRechits_.product();
 
 	Handle<edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> >  > HGCEERechits_;
 	iEvent.getByToken(endcapRecHitCollection_,HGCEERechits_);
@@ -492,10 +691,10 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 	int iProcess =process ;
 
 	if(PU >40){
-	//	std::cout << "high PU, only look at process " << process << std::endl;
+		//	std::cout << "high PU, only look at process " << process << std::endl;
 	}
-	if (process <2){
-	//	std::cout << "[DEBUG] Process " << iProcess;
+	if (process <2 || genMatchPU){
+		//	std::cout << "[DEBUG] Process " << iProcess;
 		infoTruth.iProcess =iProcess;
 		info.iProcess =iProcess;
 
@@ -527,7 +726,6 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		infoTruth.eSeed_over_eReco=-999.;
 
 
-
 		nSC_h->Fill(sclusters.size());
 
 		for (unsigned int igp =0; igp < gens.size() ; igp++) { // loop over gen particles to fill truth-level tree
@@ -541,6 +739,8 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			infoTruth.eReco_over_eTrue = -999.;
 			infoTruth.matchIndex=-999;
 			infoTruth.pt=-999.;
+			infoTruth.et=-999.;
+			infoTruth.recopt=-999.;
 			infoTruth.clustersSize=-999;
 			infoTruth.nClusters09=-999;
 			infoTruth.hoe  =-999.;         
@@ -557,6 +757,12 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			infoTruth.sigmaEtaEtaNoDir=-999.;
 			infoTruth.showerStartPosNoDir=-999.;
 			infoTruth.lengthCompatibilityNoDir=-999.;
+			infoTruth.firstLayerWith99 = -999.;
+			infoTruth.firstLayerWith95 = -999.;
+			infoTruth.firstLayerWith90 = -999.;
+			infoTruth.firstLayerWith68 = -999.;
+			infoTruth.showerStartPos = -999.;
+			infoTruth.showerStartPos3 = -999.;
 
 			if (iProcess==0 && (fabs(gens[igp]->pdgId()) != 22 || gens[igp]->status() != 3)) {
 				//std::cout <<  "process 0 - pass "<< (iProcess==0 && (fabs(gens[igp]->pdgId()) != 22 || gens[igp]->status() != 3)) << std::endl;
@@ -566,7 +772,7 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			if (iProcess==2 && ( !(fabs(gens[igp]->pdgId()) <8 || gens[igp]->pdgId() == 21) || gens[igp]->status() != 3)) continue;
 
 			if (gens[igp]->status() == 3) {
-		//		std::cout << "[debug] gen pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", e " << gens[igp]->energy() << ", mother " << std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl
+				//		std::cout << "[debug] gen pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", e " << gens[igp]->energy() << ", mother " << std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl
 			};
 
 
@@ -578,6 +784,7 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 			float dRBest =999;
 			infoTruth.pt = gens[igp]->pt();
+			infoTruth.et =( gens[igp]->energy())/std::cosh(infoTruth.eta);
 			infoTruth.eTrue = gens[igp]->energy();
 
 			for (unsigned int isc =0; isc < sclusters.size() ; isc++){ //subloop over sc's to find matches
@@ -603,6 +810,7 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 				//	recoPt = sclusters[infoTruth.matchIndex]->energy() /std::cosh(sclusters[infoTruth.matchIndex]->eta());
 				//infoTruth.eReco = (sclusters[infoTruth.matchIndex]->energy());
 				infoTruth.eReco = resumEmEnergy(sclusters[infoTruth.matchIndex], clusters);
+				infoTruth.recopt =  infoTruth.eReco/std::cosh(infoTruth.etaSC);
 				infoTruth.eSeed = (clusterEmEnergy(sclusters[infoTruth.matchIndex]->seed(), clusters));
 				infoTruth.eSeed_over_eReco = (infoTruth.eSeed/infoTruth.eReco);
 				infoTruth.eReco_over_eTrue = (infoTruth.eReco/gens[igp]->energy());
@@ -620,9 +828,13 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 					//std::vector<float> locCov = EcalClusterTools::localCovariances( *(sclusters[infoTruth.matchIndex]->seed().get()), &(*eeRecHits), &(*caloTopo_));	
 					//	 std::vector<float> locCov = EcalClusterTools::localCovariances( *(sclusters[infoTruth.matchIndex]->seed().get()), (const edm::SortedCollection<EcalRecHit>*) &(*HGCEERechits), &(*caloTopo_));	
 
-
-					double sieie =  fillEmIdVars(sclusters[infoTruth.matchIndex], clusters,  *HGCEERechits, geom);
-					if (sieie);
+					if(PU >40){
+						double sieie =  fillEmIdVarsHiPU(sclusters[infoTruth.matchIndex], clusters,  *HGCEERechits, *HGCHEFRechits,geom);
+						if (sieie);
+					} else {
+						double sieie =  fillEmIdVars(sclusters[infoTruth.matchIndex], clusters,  *HGCEERechits, *HGCHEFRechits, geom);
+						if (sieie);
+					}
 					// sieie =  fillEmIdVarsNoDir(sclusters[infoTruth.matchIndex], clusters,  *HGCEERechits, geom);	
 					//		std::cout << "sigmaIeIE " << sieie  << std::endl ;
 
@@ -646,7 +858,7 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 				}
 
 				//if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1 &&  recoPt >40)
-				if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1 &&  gens[igp]->pt() >10)
+				if(fabs(infoTruth.eta) > 1.6 && fabs(infoTruth.eta) <2.8 && infoTruth.matchIndex > -1 &&  gens[igp]->et() >10)
 				{
 					eRoT_OLD_h->Fill(sclusters[infoTruth.matchIndex]->energy()/gens[igp]->energy());
 					eRoT_h->Fill(infoTruth.eReco/gens[igp]->energy());
@@ -659,7 +871,18 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 						hoe_hgg_h->Fill(infoTruth.hoe);
 						see_hgg_h->Fill(infoTruth.sigmaEtaEta);
 						ssz_hgg_h->Fill(infoTruth.showerStartPos);
+						ssz3_hgg_h->Fill(infoTruth.showerStartPos3);
 						lcp_hgg_h->Fill(infoTruth.lengthCompatibility);
+
+						flw99_hgg_h->Fill(infoTruth.firstLayerWith99);
+						flw95_hgg_h->Fill(infoTruth.firstLayerWith95);
+						flw90_hgg_h->Fill(infoTruth.firstLayerWith90);
+						flw68_hgg_h->Fill(infoTruth.firstLayerWith68);
+						
+						flwX099_hgg_h->Fill(infoTruth.firstLayerWith99Pedro);
+						flwX095_hgg_h->Fill(infoTruth.firstLayerWith95Pedro);
+						flwX090_hgg_h->Fill(infoTruth.firstLayerWith90Pedro);
+						flwX068_hgg_h->Fill(infoTruth.firstLayerWith68Pedro);
 
 					}
 
@@ -668,14 +891,38 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 						hoe_zee_h->Fill(infoTruth.hoe);
 						see_zee_h->Fill(infoTruth.sigmaEtaEta);
 						ssz_zee_h->Fill(infoTruth.showerStartPos);
-						lcp_zee_h->Fill(infoTruth.lengthCompatibility); 			
+						ssz3_zee_h->Fill(infoTruth.showerStartPos3);
+						lcp_zee_h->Fill(infoTruth.lengthCompatibility); 		
+
+						flw99_zee_h->Fill(infoTruth.firstLayerWith99);
+						flw95_zee_h->Fill(infoTruth.firstLayerWith95);
+						flw90_zee_h->Fill(infoTruth.firstLayerWith90);
+						flw68_zee_h->Fill(infoTruth.firstLayerWith68);
+
+						flwX099_zee_h->Fill(infoTruth.firstLayerWith99Pedro);
+						flwX095_zee_h->Fill(infoTruth.firstLayerWith95Pedro);
+						flwX090_zee_h->Fill(infoTruth.firstLayerWith90Pedro);
+						flwX068_zee_h->Fill(infoTruth.firstLayerWith68Pedro);
+
 					}
 
 					if(iProcess ==2){
 						hoe_qcd_h->Fill(infoTruth.hoe);
 						see_qcd_h->Fill(infoTruth.sigmaEtaEta);
 						ssz_qcd_h->Fill(infoTruth.showerStartPos);
+						ssz3_qcd_h->Fill(infoTruth.showerStartPos3);
 						lcp_qcd_h->Fill(infoTruth.lengthCompatibility);
+
+						flw99_qcd_h->Fill(infoTruth.firstLayerWith99);
+						flw95_qcd_h->Fill(infoTruth.firstLayerWith95);
+						flw90_qcd_h->Fill(infoTruth.firstLayerWith90);
+						flw68_qcd_h->Fill(infoTruth.firstLayerWith68);
+						
+						flwX099_qcd_h->Fill(infoTruth.firstLayerWith99Pedro);
+						flwX095_qcd_h->Fill(infoTruth.firstLayerWith95Pedro);
+						flwX090_qcd_h->Fill(infoTruth.firstLayerWith90Pedro);
+						flwX068_qcd_h->Fill(infoTruth.firstLayerWith68Pedro);
+
 
 					}
 				}
@@ -689,19 +936,20 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 	//--------------> End per-genPhoton tree <------------------
 
-	if ( process ==2){
+	if ( process ==2 && !genMatchPU){
 		//--------------> Begin per-SC tree <---------------------- 
 
 		// loop over superclusters (eg reco particles). 
 		int nSCAnalyzed =0;
 		for( unsigned int isc =0; isc< sclusters.size() ; isc++){ // isc = index_super_cluster
-			
-			 int detectorSC = sclusters[isc]->seed()->hitsAndFractions()[0].first.subdetId() ;
 
-				if ( detectorSC!=HGCEE) { continue;}
+			int detectorSC = sclusters[isc]->seed()->hitsAndFractions()[0].first.subdetId() ;
+
+			if ( detectorSC!=HGCEE) { continue;}
 			nSCAnalyzed++;
 			info.eReco_over_eTrue=-999.;
 			info.pt=-999.;
+			info.et=-999.;
 			info.hoe=-999.;
 			info.eta=-999.;
 			info.phi=-999.;
@@ -709,10 +957,17 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			info.eTrue=-999.;
 			info.matchIndex=-999;
 			info.clustersSize=-999;
+			info.firstLayerWith99 = -999.;
+			info.firstLayerWith95 = -999.;
+			info.firstLayerWith90 = -999.;
+			info.firstLayerWith68 = -999.;
+			info.showerStartPos = -999.;
+			info.showerStartPos3 = -999.;
 
 			//	std::cout << " sc " << isc<< " eta " << sclusters[isc]->eta() << ", phi " << sclusters[isc]->phi()<< std::endl;
 
-			info.pt= sclusters[isc]->energy() /std::cosh(sclusters[isc]->eta());
+			info.pt= sclusters[isc]->energy()/std::cosh(sclusters[isc]->eta());
+			info.et= sclusters[isc]->energy() /std::cosh(sclusters[isc]->eta());
 			info.eta=sclusters[isc]->eta();
 			info.phi=sclusters[isc]->phi();
 			info.eReco = sclusters[isc]->energy();
@@ -722,16 +977,23 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			eta_h->Fill(info.eta);
 			phi_h->Fill(info.phi);
 
-		//	float dRBest = 999.; // dR best is used to find the gen-reco match with smallest dR.
+			//	float dRBest = 999.; // dR best is used to find the gen-reco match with smallest dR.
 
 
 			int detector = sclusters[isc]->seed()->hitsAndFractions()[0].first.subdetId() ;
 
 			if ( detector==HGCEE) {
 
+				if(PU >40){
+					double sieie =  fillEmIdVarsHiPU(sclusters[isc], clusters,  *HGCEERechits, *HGCHEFRechits,geom);
+					if (sieie);
+				} else {
+					double sieie =  fillEmIdVars(sclusters[isc], clusters,  *HGCEERechits,*HGCHEFRechits,  geom);
+					if (sieie);
+				}
 
-				double sieie =  fillEmIdVars(sclusters[isc], clusters,  *HGCEERechits, geom);	
-				if (sieie);
+				//	double sieie =  fillEmIdVars(sclusters[isc], clusters,  *HGCEERechits, geom);	
+				//	if (sieie);
 				// sieie =  fillEmIdVarsNoDir(sclusters[infoTruth.matchIndex], clusters,  *HGCEERechits, geom);	
 				//		std::cout << "test -1"<< sieie << std::endl;
 				const auto & scl = (*HGCEESCs)[isc] ;
@@ -747,11 +1009,24 @@ HoverEAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 			}
 
 
-			if(iProcess ==2){
-				hoe_qcd_h->Fill(info.hoe);
-				see_qcd_h->Fill(info.sigmaEtaEta);
-				ssz_qcd_h->Fill(info.showerStartPos);
-				lcp_qcd_h->Fill(info.lengthCompatibility);
+			if(fabs(info.eta) > 1.6 && fabs(info.eta) <2.8 &&  info.pt >10){
+				if(iProcess ==2){
+					hoe_qcd_h->Fill(info.hoe);
+					see_qcd_h->Fill(info.sigmaEtaEta);
+					ssz_qcd_h->Fill(info.showerStartPos);
+					ssz3_qcd_h->Fill(info.showerStartPos3);
+					lcp_qcd_h->Fill(info.lengthCompatibility);
+					
+					flw99_qcd_h->Fill(infoTruth.firstLayerWith99);
+					flw95_qcd_h->Fill(infoTruth.firstLayerWith95);
+					flw90_qcd_h->Fill(infoTruth.firstLayerWith90);
+					flw68_qcd_h->Fill(infoTruth.firstLayerWith68);
+
+					flwX099_qcd_h->Fill(infoTruth.firstLayerWith99Pedro);
+					flwX095_qcd_h->Fill(infoTruth.firstLayerWith95Pedro);
+					flwX090_qcd_h->Fill(infoTruth.firstLayerWith90Pedro);
+					flwX068_qcd_h->Fill(infoTruth.firstLayerWith68Pedro);
+				}
 			}
 
 			tree->Fill();

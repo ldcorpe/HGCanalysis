@@ -79,6 +79,7 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 #"file:/afs/cern.ch/user/l/lcorpe/work/public/HGCAL/SingleElectronPt35_PU0_RECO_9.root"))
 
 process_ =0
+subsample =8;
 
 import os,sys
 if(len(sys.argv)>2):
@@ -123,11 +124,12 @@ process.source = cms.Source("PoolSource",
                             fileNames=cms.untracked.vstring(fileNames),
                             #fileNames=cms.untracked.vstring("file:HggRelval.root"),
                             #fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/private/HGCALreco3/CMSSW_6_2_0_SLHC22/src/Hgg0PU-1kEvents_1.root"),
-                            skipEvents=cms.untracked.uint32(0))
+                            skipEvents=cms.untracked.uint32(subsample*1000))
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
+
 
 #load the analyzer
 import getpass
@@ -135,7 +137,7 @@ whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggQCD.root'))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggPU140_%s.root'%(processList[process_])))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggPU140_%s_ssz3_%d.root'%(processList[process_],subsample)))
 process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
@@ -152,7 +154,8 @@ process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
 												hOverEConeSize = cms.double(0.15),
 												endcapHCALClusters= cms.InputTag("particleFlowClusterHGCHEF"),
 												PU = cms.int32(140),
-												process_ = cms.int32(process_)
+												process_ = cms.int32(process_),
+												genMatchPU_ = cms.int32(0)
                           )
 
 
