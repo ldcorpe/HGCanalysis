@@ -48,7 +48,7 @@ import os,sys
 #print '[runHGCHitsAnalyzer] processing %d files of %s, starting from %d'%(step,preFix,ffile)
 
 #configure the source (list all files in directory within range [ffile,ffile+step[
-from UserCode.HGCanalysis.storeTools_cff import fillFromStore
+#from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 #process.source = cms.Source("PoolSource",                            
 #                            fileNames=cms.untracked.vstring()
 #                            )
@@ -79,15 +79,15 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(9000) )
 
 #load the analyzer
 import getpass
 whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC.root'))
-process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
+process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC_0.root'))
+#process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 weight_vec_ee_electrons = [0.080]
 weight_vec_ee_electrons.extend([0.620 for x in range(10)])
@@ -102,6 +102,8 @@ process.hgg = cms.EDAnalyzer("AMStyleHggAnalyser",
 												endcapSuperClusterCollection = cms.untracked.InputTag("particleFlowSuperClusterHGCEE"),
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
 										#		eeRecHitCollection = cms.untracked.InputTag("particleFlowRecHitHGCEELC"),
+										    g4TracksSource    = cms.untracked.string('g4SimHits'),
+												g4VerticesSource  = cms.untracked.string('g4SimHits'),
 												genParticlesTag =  cms.untracked.InputTag("genParticles"),
 												weights_ee = cms.vdouble(weight_vec_ee_electrons),
 												hgcOverburdenParamFile = cms.FileInPath('RecoParticleFlow/PFClusterProducer/data/HGCMaterialOverburden.root')

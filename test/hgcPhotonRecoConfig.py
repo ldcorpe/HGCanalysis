@@ -87,7 +87,6 @@ whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC.root'))
-process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 weight_vec_ee_electrons = [0.080]
 weight_vec_ee_electrons.extend([0.620 for x in range(10)])
@@ -103,6 +102,8 @@ process.hgg = cms.EDAnalyzer("HGCPhotonReco",
 												endcapSuperClusterCollection = cms.untracked.InputTag("particleFlowSuperClusterHGCEE"),
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
 										#		eeRecHitCollection = cms.untracked.InputTag("particleFlowRecHitHGCEELC"),
+												g4VerticesSource  = cms.untracked.string('g4SimHits'),
+												g4TracksSource    = cms.untracked.string('g4SimHits'),
 												genParticlesTag =  cms.untracked.InputTag("genParticles"),
 												weights_ee = cms.vdouble(weight_vec_ee_electrons),
 												hgcOverburdenParamFile = cms.FileInPath('RecoParticleFlow/PFClusterProducer/data/HGCMaterialOverburden.root')

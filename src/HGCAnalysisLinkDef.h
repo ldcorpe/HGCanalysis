@@ -1,4 +1,8 @@
 #include "UserCode/HGCanalysis/interface/HuffmanAlgo.h"
+#include "UserCode/HGCanalysis/interface/HGCAnalysisTools.h"
+#include "UserCode/HGCanalysis/interface/ROIInfo.h"
+#include "UserCode/HGCanalysis/interface/HGCROISummary.h"
+
 
 #ifdef __CINT__
 
@@ -17,6 +21,17 @@
 #pragma link C++ function getTriggerBits;
 #pragma link C++ function getReadoutBits;
 #pragma link C++ function testCompressionAlgos;
+#pragma link C++ struct G4InteractionPositionInfo;
+#pragma link C++ function getInteractionPositionLC;
+#pragma link C++ function getInteractionPosition;
+#pragma link C++ function getEffSigma;
+#pragma link C++ class ROIInfo;
+#pragma link C++ class std::vector<ROIInfo>;
+#pragma link C++ getLambdaForHGCLayer;
+#pragma link C++ class HGCROISummary;
+#pragma link C++ function initHGCROITree;
+#pragma link C++ function attachHGCROITree;
+
 
 #endif
 

@@ -55,6 +55,15 @@
 #include "DataFormats/ForwardDetId/interface/HGCEEDetId.h"
 #include "DataFormats/ForwardDetId/interface/HGCHEDetId.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
+
+#include "SimDataFormats/Track/interface/SimTrack.h"
+#include "SimDataFormats/Track/interface/SimTrackContainer.h"
+#include "SimDataFormats/Vertex/interface/SimVertex.h"
+#include "SimDataFormats/Vertex/interface/SimVertexContainer.h"
+
+
+#include "UserCode/HGCanalysis/interface/HGCAnalysisTools.h"
+
 #include "TFile.h"
 #include "TGraphErrors.h"
 
@@ -83,9 +92,11 @@ struct infoTruth_t {
 	float eta;
 	float etaSC;
 	float etaSeed;
+	float etaEcal;
 	float phi;
 	float phiSC;
 	float phiSeed;
+	float phiEcal;
 	int   matchIndex;
 	float pt;
 	float eTrue;
@@ -104,6 +115,10 @@ struct infoTruth_t {
 	float etaWidthNew;
 	int clustersSize;
 	int nClusters09;
+	int converted;
+	float x;
+	float y;
+	float phiCrackDistance;
 
 };
 
@@ -136,6 +151,7 @@ class AMStyleHggAnalyser : public edm::EDAnalyzer {
 		float claudeEnergy( const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float window);
 		float claudeEnergySC( const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float window);
 		float get3x3EmEnergy(const edm::PtrVector<reco::PFRecHit>& rcs, const edm::PtrVector<reco::PFCluster>& clusters,  const edm::Ptr<reco::SuperCluster>& sc, const edm::EventSetup& iSetup);
+		float phiCrackDistance (float x, float y);
 
 	private:
 
@@ -152,8 +168,10 @@ class AMStyleHggAnalyser : public edm::EDAnalyzer {
 		edm::EDGetTokenT<edm::View<reco::SuperCluster> >endcapSuperClusterCollection_;
 		edm::EDGetTokenT<edm::View<reco::PFCluster> >endcapClusterCollection_     ;
 		edm::EDGetTokenT<edm::View<reco::GenParticle> >genParticlesCollection_     ;
+		edm::EDGetTokenT<edm::View<int> >genParticlesInts_     ;
 		edm::EDGetTokenT<edm::View<reco::PFRecHit> > eeRecHitCollection_     ;
-
+		
+		std::string g4TracksSource_, g4VerticesSource_;
 		std::vector<std::string> geometrySource_;
 
 		edm::Handle<HGCRecHitCollection> recHits_;	
@@ -192,11 +210,17 @@ AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	endcapSuperClusterCollection_(consumes <edm::View<reco::SuperCluster> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapSuperClusterCollection",edm::InputTag("particleFlowSuperClusterHGCEE")))),
 	endcapClusterCollection_(consumes <edm::View<reco::PFCluster> > (iConfig.getUntrackedParameter<edm::InputTag>("endcapClusterCollection",edm::InputTag("particleFlowClusterHGCEE")))),
 	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles")))),
+	genParticlesInts_(consumes <edm::View<int> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles")))),
 	eeRecHitCollection_(consumes <edm::View<reco::PFRecHit> > (iConfig.getUntrackedParameter<edm::InputTag>("eeRecHitCollection",edm::InputTag("particleFlowRecHitHGCEE:Cleaned")))),
 	_hgcOverburdenParam(nullptr),
 	_hgcLambdaOverburdenParam(nullptr),
 	_weights_ee(iConfig.getParameter<std::vector<double> >("weights_ee"))
-{
+{	
+
+	//SIM TRACK
+  g4TracksSource_           = iConfig.getUntrackedParameter<std::string>("g4TracksSource");
+  g4VerticesSource_         = iConfig.getUntrackedParameter<std::string>("g4VerticesSource");
+	// SIM TRACK
 	geometrySource_ = iConfig.getUntrackedParameter< std::vector<std::string> >("geometrySource");
 	edm::Service<TFileService> fs_;
 	eta_h         = fs_->make<TH1F>("eta_h","eta_h",100,-5,5);
@@ -247,6 +271,10 @@ AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	treeTruth->Branch("etaSeed"              ,&infoTruth.etaSeed             ,"etaSeed/F");
 	treeTruth->Branch("phi"              ,&infoTruth.phi             ,"phi/F");
 	treeTruth->Branch("phiSC"              ,&infoTruth.phiSC             ,"phiSC/F");
+	treeTruth->Branch("x"              ,&infoTruth.x             ,"x/F");
+	treeTruth->Branch("y"              ,&infoTruth.y             ,"y/F");
+	treeTruth->Branch("phiSC"              ,&infoTruth.phiSC             ,"phiSC/F");
+	treeTruth->Branch("phiSC"              ,&infoTruth.phiSC             ,"phiSC/F");
 	treeTruth->Branch("phiSeed"              ,&infoTruth.phiSeed             ,"phiSeed/F");
 	treeTruth->Branch("matchIndex"              ,&infoTruth.matchIndex            ,"matchIndex/I");
 	treeTruth->Branch("clustersSize"              ,&infoTruth.clustersSize           ,"clustersSize/I");
@@ -255,6 +283,8 @@ AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	treeTruth->Branch("phiWidth"              ,&infoTruth.phiWidth             ,"phiWidth/F");
 	treeTruth->Branch("etaWidthNew"              ,&infoTruth.etaWidthNew             ,"etaWidthNew/F");
 	treeTruth->Branch("phiWidthNew"              ,&infoTruth.phiWidthNew             ,"phiWidthNew/F");
+	treeTruth->Branch("converted"              ,&infoTruth.converted           ,"converted/I");
+	treeTruth->Branch("phiCrackDistance"              ,&infoTruth.phiCrackDistance           ,"phiCrackDistance/F");
 
 	if(iConfig.exists("hgcOverburdenParamFile"))
 	{
@@ -871,6 +901,32 @@ float AMStyleHggAnalyser::get3x3EmEnergy(const  edm::PtrVector<reco::PFRecHit>& 
 }
 
 
+float AMStyleHggAnalyser::phiCrackDistance (float x, float y){
+float d=999;
+float dmin=999;
+//there are six lines to consider, which go through the origin to the point (cos(N*0.349+0.1745), sin(N*0.349+0.1745));
+//0.349 is 20 deg in rad, 0.1745 is teh 10 deg offset
+// these are the lines y = tan(N*pi/6)x., or tan(N*pi/6)* -y =0
+// Distance( ax+by+c=0, (x0,y0)) = fabs(a0 + by0 +c)/sqrt(a*a+b*b)
+
+for (int N =0; N< 12; N++){
+
+float a=tan(N*0.349+0.1745);
+d = fabs( a*x -y)/sqrt(a*a + 1);
+
+if (d<dmin) dmin=d;
+
+
+}
+
+
+
+
+return d;
+}
+
+
+>>>>>>> 0702ea19631088932ff7cda1d5f2cc8096fdb029
 
 
 float AMStyleHggAnalyser::clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c,const edm::PtrVector<reco::PFCluster>& clusters){
@@ -920,6 +976,27 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	const PtrVector<reco::PFRecHit>& rcs = eeRecHits->ptrVector();
 	if (rcs.size());
 
+	//SIM TRACK
+	//generator level particles
+	edm::Handle<reco::GenParticleCollection> genParticles;
+	iEvent.getByLabel("genParticles", genParticles);
+//	auto gens2 = genParticles.product();
+//	size_t maxGenParts(genParticles->size());
+//	if(maxGenParts>2) maxGenParts=2;
+//	if(genParticles->size()>maxGenParts) std::cout << "[Warning] found more than " << maxGenParts << " gen particles, will save only first " << maxGenParts << std::endl;
+
+
+	//Geant4 collections
+	edm::Handle<edm::SimTrackContainer> SimTk;
+	iEvent.getByLabel(g4TracksSource_,SimTk);
+	edm::Handle<edm::SimVertexContainer> SimVtx;
+	iEvent.getByLabel(g4VerticesSource_,SimVtx); 
+	edm::Handle<edm::View<int> > genBarcodes;
+//	iEvent.getByLabel("genParticlesTag",genBarcodes);
+	iEvent.getByToken(genParticlesInts_,genBarcodes);
+	auto gBarcodes =  genBarcodes->ptrVector();
+	//SIM TRACK
+>>>>>>> 0702ea19631088932ff7cda1d5f2cc8096fdb029
 
 	// initialise tree entries
 	info.pt=-999.;
@@ -933,6 +1010,8 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	infoTruth.etaSC=-999.;
 	infoTruth.etaSeed=-999.;
 	infoTruth.phi=-999.;
+	infoTruth.x=-999.;
+	infoTruth.y=-999.;
 	infoTruth.phiSC=-999.;
 	infoTruth.phiSeed=-999.;
 	infoTruth.etaWidth=-999.;
@@ -951,6 +1030,9 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 
 	nSC_h->Fill(sclusters.size());
+	int count =0;
+
+	//std::cout << "++++++++++++++++ " << gens.size() <<", " << gBarcodes.size() << std::endl;
 
 	for (unsigned int igp =0; igp < gens.size() ; igp++) { // loop over gen particles to fill truth-level tree
 
@@ -958,6 +1040,8 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		infoTruth.etaSC=-999.;
 		infoTruth.etaSeed=-999.;
 		infoTruth.phi=-999.;
+		infoTruth.y=-999.;
+		infoTruth.x=-999.;
 		infoTruth.phiSC=-999.;
 		infoTruth.phiSeed=-999.;
 		infoTruth.eReco_over_eTrue = -999.;
@@ -978,35 +1062,83 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		infoTruth.phiWidth=-999.;
 		infoTruth.etaWidthNew=-999.;
 		infoTruth.phiWidthNew=-999.;
+		infoTruth.converted =-999.; //SIM TRACK
+		infoTruth.phiCrackDistance =-999.; //SIM TRACK
 
-		if (gens[igp]->pdgId() != 22 || gens[igp]->status() != 3) continue;
+		//std::cout << "debug " << genBarcodes->at(igp) << std::endl; 
+		
+		if (gens[igp]->pdgId() != 22 ) continue;
+		if( gens[igp]->status() != 3) continue;
+		//if( gens[igp]->pt() <10.) continue;
 		assert(gens.size() >0); // only the case for the electron gun sample
-		infoTruth.eta=gens[igp]->eta();
+		infoTruth.eta      = gens[igp]->eta();
 		infoTruth.phi      = gens[igp]->phi();
+		 
+		size_t nHitsBeforeHGC(0);
+		//math::XYZVectorD hitPos=getInteractionPositionLC(SimTk.product(),SimVtx.product(),*(gens[igp].get())).pos;
+		math::XYZVectorD hitPos=getInteractionPositionLC(SimTk.product(),SimVtx.product(), gens[igp]->pt()).pos;//,*(gens[igp].get())).pos;
+		const double z = std::abs(hitPos.z());
+		//double z=0;
+		nHitsBeforeHGC += (unsigned)(z < 317 && z > 1e-3);
 
-		//std::cout << "[debug] gen pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", e " << gens[igp]->energy() << ", mother " << std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;
+	
+		
+	//	std::cout << "[debug] gen "<< count << "  pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", z " << z << ", converted " << nHitsBeforeHGC << ", pt " << gens[igp]->pt() << ", barcode " << *((gBarcodes[igp]).get()) <<  std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;
+		
+		count++;
+		infoTruth.converted = nHitsBeforeHGC;
+
+
+
 
 		float dRBest =999;
 		infoTruth.pt = gens[igp]->pt();
 		infoTruth.eTrue = gens[igp]->energy();
 
-		for (unsigned int isc =0; isc < sclusters.size() ; isc++){ //subloop over sc's to find matches
+		float zHGC =320.38;
+		float rHGC = 32.0228;
+		float RHGC = 152.153;
+		if (infoTruth.eta <0) zHGC = -1*zHGC;
+		math::XYZPoint vPos = gens[igp]->vertex();
 
+		float theta = 2*std::atan(std::exp(-infoTruth.eta));
+		float h = std::tan(theta)*(zHGC-vPos.z());
+		if (h>RHGC || h<rHGC) continue;
+		float eta_ECAL = -std::log(std::tan(std::asin(h/std::sqrt(h*h+zHGC*zHGC))/2)) ;
+		if  (infoTruth.eta <0) eta_ECAL = -1*eta_ECAL;
+
+		infoTruth.etaEcal =eta_ECAL;
+		infoTruth.phiEcal = infoTruth.phi;
+		infoTruth.x = (zHGC/std::cos(theta))* std::sin(theta) *std::cos(infoTruth.phi);
+		infoTruth.y = (zHGC/std::cos(theta))* std::sin(theta) *std::sin(infoTruth.phi);
+
+		infoTruth.phiCrackDistance = phiCrackDistance(infoTruth.etaEcal, infoTruth.phiEcal);
+		
+	//	if (fabs(eta_ECAL) >2.7 || fabs(eta_ECAL)<1.6) continue; //FIXME might want to remove this later
+		std::cout << "[debug] gen "<< count << "  pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", z " << z << ", converted " << nHitsBeforeHGC << ", pt " << gens[igp]->pt() << ", barcode " << *((gBarcodes[igp]).get()) <<  std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;
+
+		for (unsigned int isc =0; isc < sclusters.size() ; isc++){ //subloop over sc's to find matches
 			// calculate dR... dE = dEta, dP = dPhi
-			float dE = sclusters[isc]->eta() - gens[igp]->eta();
+			float dE = fabs(sclusters[isc]->eta() - eta_ECAL);
 			dE =dE*dE;
-			float dP = sclusters[isc]->phi() - gens[igp]->phi();
+			float dP = deltaPhi(sclusters[isc]->phi(), gens[igp]->phi());
 			dP =dP*dP;
 			float dR = sqrt(dE +dP);
+			//std::cout << "[debug ] SC e " << (sclusters[isc])->energy() << ", et " <<  sclusters[isc]->energy()/std::cosh(eta_ECAL)<< ", eta:phi " << (sclusters[isc])->eta() << ":" <<(sclusters[isc])->phi() << ", dR " << dR << std::endl;
 
-			if (dR < maxDr && dR < dRBest) { // only true if dR is both below limit value and smaller than previous best dR.
-				dRBest = dR;
-
+			if (dR < maxDr) { // only true if dR is both below limit value and smaller than previous best 
+				//	std::cout << "check : ereco : " << resumEmEnergy(sclusters[isc], clusters) << ", etrue : " << infoTruth.eTrue << " dR = "<< dR << std::endl; 
+				std::cout << "MATCH" << std::endl;
 				// so, if we have a dR match, then store the corresponding match index.
-				infoTruth.matchIndex = isc;
+				if (dR < dRBest){
+					dRBest = dR;
+					infoTruth.matchIndex = isc;
+				}
 			}
 
 		}
+
+		if (infoTruth.matchIndex <-1) { std::cout << "NO MATCH " << std::endl;};
 
 		//float recoPt = -999.;
 		if (infoTruth.matchIndex >-1) {
@@ -1027,7 +1159,7 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 			auto 	sc = sclusters[infoTruth.matchIndex];
 			for(unsigned int l =0 ; l<sc->clusters().size(); l++){
-				
+
 				if (sc->clusters()[l]->eta() == sc->seed()->eta()) continue;
 
 				dEta_h->Fill(sc->seed()->eta() - (sc->clusters())[l]->eta(), sc->clusters()[l]->energy()/infoTruth.eReco);
@@ -1044,9 +1176,9 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 
 			infoTruth.eReco3x3Claude  =claudeEnergy(sclusters[infoTruth.matchIndex],geometrySource_,iEvent, iSetup, 1. ) ;
-	//	infoTruth.eReco3x3ClaudeSC  =claudeEnergySC(sclusters[infoTruth.matchIndex],geometrySource_,iEvent, iSetup, 1. ) ;
+			//	infoTruth.eReco3x3ClaudeSC  =claudeEnergySC(sclusters[infoTruth.matchIndex],geometrySource_,iEvent, iSetup, 1. ) ;
 			infoTruth.eReco5x5Claude  =claudeEnergy(sclusters[infoTruth.matchIndex],geometrySource_,iEvent, iSetup, 2. ) ;
-		//	infoTruth.eReco5x5ClaudeSC  =claudeEnergySC(sclusters[infoTruth.matchIndex],geometrySource_,iEvent, iSetup, 2. ) ;
+			//	infoTruth.eReco5x5ClaudeSC  =claudeEnergySC(sclusters[infoTruth.matchIndex],geometrySource_,iEvent, iSetup, 2. ) ;
 			//		float test = get3x3EmEnergy(  rcs, clusters, sclusters[infoTruth.matchIndex], iSetup);
 			//		infoTruth.eReco3x3  = test;
 			//std::cout << "*********** E TRUE " << infoTruth.eTrue << ", E RECO (OLD) "<< infoTruth.eReco  <<", E RECO (NEW) " << test  << " E CLAUDE " << infoTruth.eReco3x3Claude<< std::endl;

@@ -1,5 +1,5 @@
-#ifndef _HGCHitsAnalyzer_h_
-#define _HGCHitsAnalyzer_h_
+#ifndef _HGCROIAnalyzer_h_
+#define _HGCROIAnalyzer_h_
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
@@ -20,48 +20,60 @@
 #include "SimG4CMS/Calo/interface/HGCNumberingScheme.h"
 #include "Geometry/FCalGeometry/interface/HGCalGeometry.h"
 
+#include "FWCore/ParameterSet/interface/FileInPath.h"
 
+#include "UserCode/HGCanalysis/interface/HGCROISummary.h"
 
-#include "UserCode/HGCanalysis/interface/HGCSimulationEvent.h"
-
-
-
-
+#include "TH2F.h"
 #include "TH1F.h"
 #include "TTree.h"
+#include "TNtuple.h"
+#include "TRandom.h"
 
 #include <string>
 
 /**
-   @class HGCHitsAnalyzer
+   @class HGCROIAnalyzer
    @author P. Silva (CERN)
 */
 
-class HGCHitsAnalyzer : public edm::EDAnalyzer 
-{
-  
+class HGCROIAnalyzer : public edm::EDAnalyzer 
+{  
  public:
   
-  explicit HGCHitsAnalyzer( const edm::ParameterSet& );
-  ~HGCHitsAnalyzer();
+  explicit HGCROIAnalyzer( const edm::ParameterSet& );
+  ~HGCROIAnalyzer();
   virtual void analyze( const edm::Event&, const edm::EventSetup& );
 
  private:
 
-  /**
-     @short loops over genparticles and saves a summary of stable (status=1) particles incoming to the detector
-   */
-  void analyzeGenParticles(edm::Handle<edm::View<reco::Candidate> > &genParticles,edm::Handle<reco::GenJetCollection> &genJets);
+  void tagEvent(const edm::Event &iEvent, const edm::EventSetup &iSetup);
+  void buildROI(const edm::Event &iEvent, const edm::EventSetup &iSetup);
 
-  /**
-     @short accumulate sim hits
-   */
-  //void analyzeHits(size_t isd,edm::Handle<edm::PCaloHitContainer> &caloHits,const HGCalGeometry *geom);
+  virtual void endJob() ;
+
+
+  //ROI stuff
+  TRandom rand_;
+  HGCROISummary roiEvt_;
+  TTree *roiT_;
+  bool saveHitTree_;
+  TH2F *regsH_;
+  Int_t nLayerBins_, nEtaBins_;
+
+  TH2F *csidrH_,*csitdrH_;
+  Int_t   ndRbins_,       nCsiBins_;
+  Float_t drMin_, drMax_, csiMin_,csiMax_;
+
+  TH2F *medianPU_csiH_,  *widthPU_csiH_, *sigma1PU_csiH_, *sigma2PU_csiH_;
+  TH2F *medianPU_csitH_, *widthPU_csitH_;
+
+  //
+  bool taggingMode_;
   
-  //tree and summary ntuple
-  TTree *t_;
-  HGCSimEvent_t simEvt_;
-  
+  //
+  edm::FileInPath roipuParamFile_;
+
   //gen level
   std::string genSource_, genJetsSource_;
   
@@ -69,6 +81,12 @@ class HGCHitsAnalyzer : public edm::EDAnalyzer
   std::vector<std::string> geometrySource_;
   std::vector<std::string> hitCollections_;
   std::vector<double> mipEn_;
+
+  //vertices
+  std::string vtxCollection_;
+
+  //tracks
+  std::string trackJetCollection_;
 };
  
 

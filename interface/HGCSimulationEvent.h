@@ -1,9 +1,10 @@
+
 #ifndef _hgcsimulationevent_h_
 #define _hgcsimulationevent_h_
 
 #include "TTree.h"
 
-#define MAXGENPEREVENT 100
+#define MAXGENPEREVENT 5000
 #define MAXHGCHITSPEREVENT 1000000
 
 struct  HGCSimEvent_t
@@ -13,7 +14,7 @@ struct  HGCSimEvent_t
 
   //generator level particles
   Short_t ngen;
-  Int_t gen_id[MAXGENPEREVENT];
+  Int_t gen_id[MAXGENPEREVENT],gen_status[MAXGENPEREVENT];
   Float_t gen_pt[MAXGENPEREVENT], gen_eta[MAXGENPEREVENT], gen_phi[MAXGENPEREVENT], gen_en[MAXGENPEREVENT];
 
   //generator level jets
@@ -26,7 +27,7 @@ struct  HGCSimEvent_t
   Short_t hit_layer[MAXHGCHITSPEREVENT];
   Float_t hit_x[MAXHGCHITSPEREVENT],hit_y[MAXHGCHITSPEREVENT],hit_z[MAXHGCHITSPEREVENT];
   Float_t hit_eta[MAXHGCHITSPEREVENT],hit_phi[MAXHGCHITSPEREVENT];
-  Float_t hit_edep[MAXHGCHITSPEREVENT];
+  Float_t hit_edep[MAXHGCHITSPEREVENT],hit_wgt[MAXHGCHITSPEREVENT],hit_wgt_t[MAXHGCHITSPEREVENT];
   
   HGCSimEvent_t()
   {
@@ -38,6 +39,6 @@ struct  HGCSimEvent_t
 
 
 void initHGCSimulationEventTree(TTree *t,HGCSimEvent_t &simEvt);
-
+void attachHGCSimulationEventTree(TTree *t,HGCSimEvent_t &simEvt);
 
 #endif
