@@ -926,7 +926,6 @@ return d;
 }
 
 
->>>>>>> 0702ea19631088932ff7cda1d5f2cc8096fdb029
 
 
 float AMStyleHggAnalyser::clusterEmEnergy(const edm::Ptr<reco::CaloCluster>& c,const edm::PtrVector<reco::PFCluster>& clusters){
@@ -996,7 +995,6 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	iEvent.getByToken(genParticlesInts_,genBarcodes);
 	auto gBarcodes =  genBarcodes->ptrVector();
 	//SIM TRACK
->>>>>>> 0702ea19631088932ff7cda1d5f2cc8096fdb029
 
 	// initialise tree entries
 	info.pt=-999.;

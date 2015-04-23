@@ -86,7 +86,7 @@ import getpass
 whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('StandAloneMethod_Hgg_0pu.root'))
 
 weight_vec_ee_electrons = [0.080]
 weight_vec_ee_electrons.extend([0.620 for x in range(10)])
