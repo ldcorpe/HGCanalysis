@@ -22,6 +22,7 @@
 #pragma link C++ function getReadoutBits;
 #pragma link C++ function testCompressionAlgos;
 #pragma link C++ struct G4InteractionPositionInfo;
+#pragma link C++ function getInteractionPositionLC;
 #pragma link C++ function getInteractionPosition;
 #pragma link C++ function getEffSigma;
 #pragma link C++ class ROIInfo;

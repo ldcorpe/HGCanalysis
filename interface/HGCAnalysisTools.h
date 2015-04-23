@@ -27,6 +27,9 @@ struct G4InteractionPositionInfo
   math::XYZVectorD pos;
   int info;
 };
+G4InteractionPositionInfo getInteractionPositionLC(const std::vector<SimTrack> *SimTk, 
+						 const std::vector<SimVertex> *SimVtx, float pt
+						 );
 G4InteractionPositionInfo getInteractionPosition(const std::vector<SimTrack> *SimTk, 
 						 const std::vector<SimVertex> *SimVtx, 
 						 int barcode);
