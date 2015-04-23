@@ -120,7 +120,7 @@ struct infoTruth_t {
 	int converted;
 	float x;
 	float y;
-	int phiCrackDistance;
+	float phiCrackDistance;
 
 };
 
@@ -153,7 +153,7 @@ class AMStyleHggAnalyser : public edm::EDAnalyzer {
 		float claudeEnergy( const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float window);
 		float claudeEnergySC( const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float window);
 		float get3x3EmEnergy(const edm::PtrVector<reco::PFRecHit>& rcs, const edm::PtrVector<reco::PFCluster>& clusters,  const edm::Ptr<reco::SuperCluster>& sc, const edm::EventSetup& iSetup);
-		int phiCrackDistance (float x, float y);
+		float phiCrackDistance (float x, float y);
 
 	private:
 
@@ -286,7 +286,7 @@ AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	treeTruth->Branch("etaWidthNew"              ,&infoTruth.etaWidthNew             ,"etaWidthNew/F");
 	treeTruth->Branch("phiWidthNew"              ,&infoTruth.phiWidthNew             ,"phiWidthNew/F");
 	treeTruth->Branch("converted"              ,&infoTruth.converted           ,"converted/I");
-	treeTruth->Branch("phiCrackDistance"              ,&infoTruth.phiCrackDistance           ,"phiCrackDistance/I");
+	treeTruth->Branch("phiCrackDistance"              ,&infoTruth.phiCrackDistance           ,"phiCrackDistance/F");
 
 	if(iConfig.exists("hgcOverburdenParamFile"))
 	{
@@ -903,7 +903,7 @@ float AMStyleHggAnalyser::get3x3EmEnergy(const  edm::PtrVector<reco::PFRecHit>& 
 }
 
 
-int phiCrackDistance (float x, float y){
+float AMStyleHggAnalyser::phiCrackDistance (float x, float y){
 float d=999;
 float dmin=999;
 //there are six lines to consider, which go through the origin to the point (cos(N*0.349+0.1745), sin(N*0.349+0.1745));
@@ -1088,6 +1088,9 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		count++;
 		infoTruth.converted = nHitsBeforeHGC;
 
+
+
+
 		float dRBest =999;
 		infoTruth.pt = gens[igp]->pt();
 		infoTruth.eTrue = gens[igp]->energy();
@@ -1097,6 +1100,7 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		float RHGC = 152.153;
 		if (infoTruth.eta <0) zHGC = -1*zHGC;
 		math::XYZPoint vPos = gens[igp]->vertex();
+
 		float theta = 2*std::atan(std::exp(-infoTruth.eta));
 		float h = std::tan(theta)*(zHGC-vPos.z());
 		if (h>RHGC || h<rHGC) continue;
@@ -1107,6 +1111,8 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		infoTruth.phiEcal = infoTruth.phi;
 		infoTruth.x = (zHGC/std::cos(theta))* std::sin(theta) *std::cos(infoTruth.phi);
 		infoTruth.y = (zHGC/std::cos(theta))* std::sin(theta) *std::sin(infoTruth.phi);
+
+		infoTruth.phiCrackDistance = phiCrackDistance(infoTruth.etaEcal, infoTruth.phiEcal);
 		
 	//	if (fabs(eta_ECAL) >2.7 || fabs(eta_ECAL)<1.6) continue; //FIXME might want to remove this later
 		std::cout << "[debug] gen "<< count << "  pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", z " << z << ", converted " << nHitsBeforeHGC << ", pt " << gens[igp]->pt() << ", barcode " << *((gBarcodes[igp]).get()) <<  std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;

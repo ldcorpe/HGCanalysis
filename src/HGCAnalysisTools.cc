@@ -36,7 +36,7 @@ G4InteractionPositionInfo getInteractionPositionLC(const std::vector<SimTrack> *
 		if (abs(tkType)!= 22) continue; // only want photons.
 		if( abs(pt - vtxTk.momentum().pt()) > 0.1) continue; // specifically, photons which have the same pt as the genphoton.
 
-		std::cout << "[debug ] track " << rawTkMult << ", type " << tkType << ", tk pt " << vtxTk.momentum().pt() << ", true pt " << pt << std::endl;
+	//	std::cout << "[debug ] track " << rawTkMult << ", type " << tkType << ", tk pt " << vtxTk.momentum().pt() << ", true pt " << pt << std::endl;
 		trackID = vtxTk.trackId() ; // save the ID of the track corresponding to the gen particle.
 		break; // found it? break teh loop.
 	}
@@ -49,7 +49,7 @@ G4InteractionPositionInfo getInteractionPositionLC(const std::vector<SimTrack> *
 		int pIdx( simVtx.parentIndex() );
 		if( pIdx!=trackID) continue;  // trackID acts as teh barcode.
 
-		std::cout << "[debug ] found vertex at x" << simVtx.position().X() << ", y " << simVtx.position().Y() <<", z " << simVtx.position().Z()<< std::endl;
+		//std::cout << "[debug ] found vertex at x" << simVtx.position().X() << ", y " << simVtx.position().Y() <<", z " << simVtx.position().Z()<< std::endl;
 
 		int vtxIdx(simVtx.vertexId());// ..save the ID of the vertex which has the track as parent.
 		
@@ -65,7 +65,7 @@ G4InteractionPositionInfo getInteractionPositionLC(const std::vector<SimTrack> *
 
 			rawTkMult++;
 				eTkMult      += (abs(tkType)==11); //count number of electrons.
-			std::cout << "[debug ] track " << rawTkMult << ", type " << tkType <<", tk vtx id " << tkVtxIdx<< std::endl;
+			//std::cout << "[debug ] track " << rawTkMult << ", type " << tkType <<", tk vtx id " << tkVtxIdx<< std::endl;
 			//break;
 		}
 
