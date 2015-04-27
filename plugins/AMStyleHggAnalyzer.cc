@@ -56,7 +56,6 @@
 #include "DataFormats/ForwardDetId/interface/HGCHEDetId.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 
-
 #include "SimDataFormats/Track/interface/SimTrack.h"
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
@@ -64,7 +63,6 @@
 
 
 #include "UserCode/HGCanalysis/interface/HGCAnalysisTools.h"
-
 
 #include "TFile.h"
 #include "TGraphErrors.h"
