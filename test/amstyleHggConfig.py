@@ -75,7 +75,7 @@ process.source = cms.Source("PoolSource",
                             fileNames=cms.untracked.vstring(fileNames),
                             #fileNames=cms.untracked.vstring("file:HggRelval.root"),
                             #fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/private/HGCALreco3/CMSSW_6_2_0_SLHC22/src/Hgg0PU-1kEvents_1.root"),
-                            skipEvents=cms.untracked.uint32(0))
+                            skipEvents=cms.untracked.uint32(5509))
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
@@ -86,7 +86,7 @@ import getpass
 whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC_0.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC_140_2_ii.root'))
 #process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 weight_vec_ee_electrons = [0.080]

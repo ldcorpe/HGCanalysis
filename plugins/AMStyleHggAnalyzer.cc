@@ -269,6 +269,7 @@ AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	treeTruth->Branch("eSeed_over_eReco"   ,&infoTruth.eSeed_over_eReco             ,"eSeed_over_eReco/F");
 	treeTruth->Branch("eReco_over_eTrue"              ,&infoTruth.eReco_over_eTrue             ,"eReco_over_eTrue/F");
 	treeTruth->Branch("eta"              ,&infoTruth.eta             ,"eta/F");
+	treeTruth->Branch("etaEcal"              ,&infoTruth.etaEcal             ,"etaEcal/F");
 	treeTruth->Branch("etaSC"              ,&infoTruth.etaSC             ,"etaSC/F");
 	treeTruth->Branch("etaSeed"              ,&infoTruth.etaSeed             ,"etaSeed/F");
 	treeTruth->Branch("phi"              ,&infoTruth.phi             ,"phi/F");
@@ -276,7 +277,7 @@ AMStyleHggAnalyser::AMStyleHggAnalyser(const edm::ParameterSet& iConfig):
 	treeTruth->Branch("x"              ,&infoTruth.x             ,"x/F");
 	treeTruth->Branch("y"              ,&infoTruth.y             ,"y/F");
 	treeTruth->Branch("phiSC"              ,&infoTruth.phiSC             ,"phiSC/F");
-	treeTruth->Branch("phiSC"              ,&infoTruth.phiSC             ,"phiSC/F");
+	treeTruth->Branch("phiEcal"              ,&infoTruth.phiEcal            ,"phiEcal/F");
 	treeTruth->Branch("phiSeed"              ,&infoTruth.phiSeed             ,"phiSeed/F");
 	treeTruth->Branch("matchIndex"              ,&infoTruth.matchIndex            ,"matchIndex/I");
 	treeTruth->Branch("clustersSize"              ,&infoTruth.clustersSize           ,"clustersSize/I");
@@ -735,7 +736,7 @@ float AMStyleHggAnalyser::claudeEnergy( const edm::Ptr<reco::SuperCluster>& sc, 
 						//	std::cout << "n Neih " << theHit->neighbours8().size() << std::endl;
 						energy += theHit->energy()*weight[layer-1]/scale;
 						float dEta = cellPos.eta() - sc->seed()->eta();
-						float dPhi = deltaPhi(cellPos.phi() , sc->seed()->phi());
+						float dPhi = DeltaPhi(cellPos.phi() , sc->seed()->phi());
 
 						etaWidthNum +=( theHit->energy()*weight[layer-1]/scale)*dEta*dEta;
 						phiWidthNum +=( theHit->energy()*weight[layer-1]/scale)*dPhi*dPhi;
@@ -904,27 +905,29 @@ float AMStyleHggAnalyser::get3x3EmEnergy(const  edm::PtrVector<reco::PFRecHit>& 
 
 
 float AMStyleHggAnalyser::phiCrackDistance (float x, float y){
-float d=999;
-float dmin=999;
-//there are six lines to consider, which go through the origin to the point (cos(N*0.349+0.1745), sin(N*0.349+0.1745));
-//0.349 is 20 deg in rad, 0.1745 is teh 10 deg offset
-// these are the lines y = tan(N*pi/6)x., or tan(N*pi/6)* -y =0
-// Distance( ax+by+c=0, (x0,y0)) = fabs(a0 + by0 +c)/sqrt(a*a+b*b)
+	float d=999;
+	float dmin=999;
+	//there are six lines to consider, which go through the origin to the point (cos(N*0.349+0.1745), sin(N*0.349+0.1745));
+	//0.349 is 20 deg in rad, 0.1745 is teh 10 deg offset
+	// these are the lines y = tan(N*pi/6)x., or tan(N*pi/6)* -y =0
+	// Distance( ax+by+c=0, (x0,y0)) = fabs(a0 + by0 +c)/sqrt(a*a+b*b)
 
-for (int N =0; N< 12; N++){
+	for (int N =0; N< 9; N++){
 
-float a=tan(N*0.349+0.1745);
-d = fabs( a*x -y)/sqrt(a*a + 1);
+		float a=tan(N*0.349+0.1745);
+		//d = fabs( a*x -y)/sqrt(a*a + 1);
+		d = fabs( a*x -y)/sqrt(a*a + 1);
 
-if (d<dmin) dmin=d;
+		if (d<dmin) {
+		
+			dmin=d;
 
+		}
 
-}
-
-
-
-
-return d;
+std::cout << "debug N" << N <<", x" << x << ", y " << y << ", a " << a<< ", d " << d << ", dmin " << dmin << std::endl;
+	}
+	
+	return dmin;
 }
 
 
@@ -981,10 +984,10 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	//generator level particles
 	edm::Handle<reco::GenParticleCollection> genParticles;
 	iEvent.getByLabel("genParticles", genParticles);
-//	auto gens2 = genParticles.product();
-//	size_t maxGenParts(genParticles->size());
-//	if(maxGenParts>2) maxGenParts=2;
-//	if(genParticles->size()>maxGenParts) std::cout << "[Warning] found more than " << maxGenParts << " gen particles, will save only first " << maxGenParts << std::endl;
+	//	auto gens2 = genParticles.product();
+	//	size_t maxGenParts(genParticles->size());
+	//	if(maxGenParts>2) maxGenParts=2;
+	//	if(genParticles->size()>maxGenParts) std::cout << "[Warning] found more than " << maxGenParts << " gen particles, will save only first " << maxGenParts << std::endl;
 
 
 	//Geant4 collections
@@ -993,7 +996,7 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	edm::Handle<edm::SimVertexContainer> SimVtx;
 	iEvent.getByLabel(g4VerticesSource_,SimVtx); 
 	edm::Handle<edm::View<int> > genBarcodes;
-//	iEvent.getByLabel("genParticlesTag",genBarcodes);
+	//	iEvent.getByLabel("genParticlesTag",genBarcodes);
 	iEvent.getByToken(genParticlesInts_,genBarcodes);
 	auto gBarcodes =  genBarcodes->ptrVector();
 	//SIM TRACK
@@ -1066,14 +1069,14 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		infoTruth.phiCrackDistance =-999.; //SIM TRACK
 
 		//std::cout << "debug " << genBarcodes->at(igp) << std::endl; 
-		
+
 		if (gens[igp]->pdgId() != 22 ) continue;
 		if( gens[igp]->status() != 3) continue;
 		//if( gens[igp]->pt() <10.) continue;
 		assert(gens.size() >0); // only the case for the electron gun sample
 		infoTruth.eta      = gens[igp]->eta();
 		infoTruth.phi      = gens[igp]->phi();
-		 
+
 		size_t nHitsBeforeHGC(0);
 		//math::XYZVectorD hitPos=getInteractionPositionLC(SimTk.product(),SimVtx.product(),*(gens[igp].get())).pos;
 		math::XYZVectorD hitPos=getInteractionPositionLC(SimTk.product(),SimVtx.product(), gens[igp]->pt()).pos;//,*(gens[igp].get())).pos;
@@ -1081,10 +1084,10 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		//double z=0;
 		nHitsBeforeHGC += (unsigned)(z < 317 && z > 1e-3);
 
-	
-		
-	//	std::cout << "[debug] gen "<< count << "  pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", z " << z << ", converted " << nHitsBeforeHGC << ", pt " << gens[igp]->pt() << ", barcode " << *((gBarcodes[igp]).get()) <<  std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;
-		
+
+
+		//	std::cout << "[debug] gen "<< count << "  pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", z " << z << ", converted " << nHitsBeforeHGC << ", pt " << gens[igp]->pt() << ", barcode " << *((gBarcodes[igp]).get()) <<  std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;
+
 		count++;
 		infoTruth.converted = nHitsBeforeHGC;
 
@@ -1112,16 +1115,16 @@ AMStyleHggAnalyser::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		infoTruth.x = (zHGC/std::cos(theta))* std::sin(theta) *std::cos(infoTruth.phi);
 		infoTruth.y = (zHGC/std::cos(theta))* std::sin(theta) *std::sin(infoTruth.phi);
 
-		infoTruth.phiCrackDistance = phiCrackDistance(infoTruth.etaEcal, infoTruth.phiEcal);
-		
-	//	if (fabs(eta_ECAL) >2.7 || fabs(eta_ECAL)<1.6) continue; //FIXME might want to remove this later
+		infoTruth.phiCrackDistance = phiCrackDistance(infoTruth.x, infoTruth.y);
+
+		//	if (fabs(eta_ECAL) >2.7 || fabs(eta_ECAL)<1.6) continue; //FIXME might want to remove this later
 		std::cout << "[debug] gen "<< count << "  pdgid " << gens[igp]->pdgId() << ", status " << gens[igp]->status() << ", z " << z << ", converted " << nHitsBeforeHGC << ", pt " << gens[igp]->pt() << ", barcode " << *((gBarcodes[igp]).get()) <<  std::endl;// (gens[igp]->mother()->pdgId()) <<  std::endl;
 
 		for (unsigned int isc =0; isc < sclusters.size() ; isc++){ //subloop over sc's to find matches
 			// calculate dR... dE = dEta, dP = dPhi
 			float dE = fabs(sclusters[isc]->eta() - eta_ECAL);
 			dE =dE*dE;
-			float dP = deltaPhi(sclusters[isc]->phi(), gens[igp]->phi());
+			float dP = DeltaPhi(sclusters[isc]->phi(), gens[igp]->phi());
 			dP =dP*dP;
 			float dR = sqrt(dE +dP);
 			//std::cout << "[debug ] SC e " << (sclusters[isc])->energy() << ", et " <<  sclusters[isc]->energy()/std::cosh(eta_ECAL)<< ", eta:phi " << (sclusters[isc])->eta() << ":" <<(sclusters[isc])->phi() << ", dR " << dR << std::endl;
