@@ -67,9 +67,10 @@ from UserCode.HGCanalysis.storeTools_cff import fillFromStore
 
 #fileNames = open("LCFilenames.txt","r")
 #fileNames = open("newRecoFiles2.txt","r")#
-#fileNames = open("sample/140PU/HGG_SLHC25.txt","r")
+fileNames = open("sample/140PU/Hgg.txt","r")
+#fileNames = open("sample/140PU/gamJet.txt","r")
 #fileNames = open("sample/0PU/HGG_SLHC25.txt","r")
-fileNames = open("sample/0PU/SingleGamma_SLHC25.txt","r")
+#fileNames = open("sample/0PU/SingleGamma_SLHC25.txt","r")
 
 process.source = cms.Source("PoolSource",
                             #fileNames=cms.untracked.vstring("root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC22/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PH2_1K_FB_V6_UPGHGCalV5-v1/00000/1CC2630B-6A8F-E411-95D3-0025905A48BA.root"),
@@ -80,7 +81,7 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
 
 #load the analyzer
 import getpass

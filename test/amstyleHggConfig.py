@@ -67,26 +67,27 @@ import os,sys
 
 #fileNames = open("LCFilenames.txt","r")
 #fileNames = open("newRecoFiles2.txt","r")#
-fileNames = open("sample/140PU/Hgg.txt","r")
+#fileNames = open("sample/140PU/Hgg.txt","r")
 #fileNames = open("sample/0PU/HGG.txt","r")
+fileNames = open("sample/140PU/gamJet.txt","r")
 
 process.source = cms.Source("PoolSource",
                             #fileNames=cms.untracked.vstring("root://cms-xrd-global.cern.ch//store/relval/CMSSW_6_2_0_SLHC22/RelValH130GGgluonfusion_14TeV/GEN-SIM-RECO/PH2_1K_FB_V6_UPGHGCalV5-v1/00000/1CC2630B-6A8F-E411-95D3-0025905A48BA.root"),
                             fileNames=cms.untracked.vstring(fileNames),
                             #fileNames=cms.untracked.vstring("file:HggRelval.root"),
                             #fileNames=cms.untracked.vstring("file:/afs/cern.ch/user/l/lcorpe/work/private/HGCALreco3/CMSSW_6_2_0_SLHC22/src/Hgg0PU-1kEvents_1.root"),
-                            skipEvents=cms.untracked.uint32(5509))
+                            skipEvents=cms.untracked.uint32(1))
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(9000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
 
 #load the analyzer
 import getpass
 whoami=getpass.getuser()
 outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
-process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC_140_2_ii.root'))
+process.TFileService = cms.Service("TFileService", fileName = cms.string('TestAMStyleHgg_140PU_testv5Geom_LC3x3_cleanedSC_140_2_iii.root'))
 #process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 weight_vec_ee_electrons = [0.080]
@@ -97,14 +98,16 @@ weight_vec_ee_electrons.extend([1.239 for x in range(9)])
 
 process.hgg = cms.EDAnalyzer("AMStyleHggAnalyser",
                           #geometrySource   = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive',  'HGCalHEScintillatorSensitive')
-												geometrySource = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive', 'HGCalHEScintillatorSensitive'),
+											
+											
+											geometrySource = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive', 'HGCalHEScintillatorSensitive'),
 												endcapRecHitCollection = cms.untracked.InputTag("HGCalRecHit:HGCEERecHits"),
 												endcapSuperClusterCollection = cms.untracked.InputTag("particleFlowSuperClusterHGCEE"),
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
 										#		eeRecHitCollection = cms.untracked.InputTag("particleFlowRecHitHGCEELC"),
-										    g4TracksSource    = cms.untracked.string('g4SimHits'),
-												g4VerticesSource  = cms.untracked.string('g4SimHits'),
-												genParticlesTag =  cms.untracked.InputTag("genParticles"),
+                             g4VerticesSource  = cms.untracked.string('g4SimHits'),
+                             g4TracksSource    = cms.untracked.string('g4SimHits'),
+                             genParticlesTag =  cms.untracked.InputTag("genParticles"),
 												weights_ee = cms.vdouble(weight_vec_ee_electrons),
 												hgcOverburdenParamFile = cms.FileInPath('RecoParticleFlow/PFClusterProducer/data/HGCMaterialOverburden.root')
 

@@ -117,7 +117,7 @@ outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggQCD.root'))
 process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggPU140_%d_b_v2b.root'%(process_)))
-process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
+#process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
                         #geometrySource   = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive',  'HGCalHEScintillatorSensitive')

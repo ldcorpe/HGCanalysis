@@ -27,7 +27,8 @@ PCAShowerAnalysis::PCAShowerAnalysis (const edm::Event& iEvent, const edm::Event
   }  
   
   // minimal rechit value
-  mip_ = 0.000040;
+  //mip_ = 0.000040;
+  mip_ = 0.000055;
   entryz_ = 320.38;
 
 }

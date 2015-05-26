@@ -128,7 +128,7 @@ process.source = cms.Source("PoolSource",
 
 #process.source.fileNames=fillFromStore('/store/cmst3/group/hgcal/CMSSW/%s'%preFix,ffile,step)
 #process.source.duplicateCheckMode = cms.untracked.string('noDuplicateCheck')
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
 
 
 #load the analyzer
@@ -138,7 +138,7 @@ outputTag=preFix.replace('/','_')
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('/tmp/%s/%s_Hits_%d.root'%(whoami,outputTag,ffile)))
 #process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggQCD.root'))
 process.TFileService = cms.Service("TFileService", fileName = cms.string('HoverEHggPU140_%s_ssz3_%d.root'%(processList[process_],subsample)))
-process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
+#process.load('UserCode.HGCanalysis.hgcHitsAnalyzer_cfi')
 
 process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
                         #geometrySource   = cms.untracked.vstring('HGCalEESensitive','HGCalHESiliconSensitive',  'HGCalHEScintillatorSensitive')
@@ -148,7 +148,6 @@ process.hgg = cms.EDAnalyzer("HoverEAnalyzer",
 												endcapClusterCollection = cms.untracked.InputTag("particleFlowClusterHGCEE"),
 												genParticlesTag =  cms.untracked.InputTag("genParticles"),
 												hcalTowers = cms.InputTag("towerMaker"),
-											#	eeRecHitCollection = cms.untracked.InputTag("particleFlowRecHitHGCEELC"),
 												hOverEPtMin = cms.double(2.),
 												hOverEMethodEndcap = cms.int32(3),
 												hOverEConeSize = cms.double(0.15),

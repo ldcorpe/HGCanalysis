@@ -31,9 +31,7 @@
 #include "RecoParticleFlow/PFClusterProducer/interface/PFClusterEnergyCorrectorBase.h"
 #include "DataFormats/ParticleFlowReco/interface/PFRecHitFwd.h"
 #include "DataFormats/ParticleFlowReco/interface/PFRecHit.h"
-#include "DataFormats/ForwardDetId/interface/HGCEEDetId.h"
 #include "DataFormats/ForwardDetId/interface/HGCHEDetId.h"
-#include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
@@ -125,7 +123,6 @@ struct info_t {
       eReco[i]  = eReco[i]/fabs(tanh(etaTrue));
       eRecoCleaned[i]  = calibratedE(eReco[i],etaTrue);
     }
-    
   };
 
   void fillSC(const edm::Ptr<reco::SuperCluster> & aSC){
@@ -159,7 +156,7 @@ struct info_t {
     yvtxTrue = (aPhoton->vertex()).Y();
     zvtxTrue = (aPhoton->vertex()).Z();
 		math::XYZVectorD hitPos=getInteractionPositionLC(SimTk.product(),SimVtx.product(), aPhoton->pt()).pos;
-		const double z = std::abs(hitPos.z());
+		const double z = std::fabs(hitPos.z());
 		converted = (unsigned)(z < 317 && z > 1e-3);
   };
 
@@ -220,6 +217,9 @@ public:
   void fillNeighbours(const HGCEEDetId & detidmax,
 		      std::vector<double> & Exy,
 		      info_t & info);
+
+	void fillDetIdStack(std::vector<HGCEEDetId> & detidmax_vec, std::vector<HGCEEDetId> & detidstack);
+
 private:
 
   virtual void beginJob() ;
@@ -580,6 +580,7 @@ HGCPhotonReco::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     info1_.fillTruth(photon1, SimTk, SimVtx);  
     info1_.fillSC(sclusters[idx1]);
     getPhotonEnergy(rechitvec,info1_);
+    std::cout << "eRecoCleaned1 " << info1_.eRecoCleaned[2] <<", etrue " << info1_.eTrue << std::endl;
   }
   if (!singleGamma_ && isInFid(photon2)){
     if (debug_) std::cout << " -------------------------- Photon2: " << std::endl;
@@ -587,6 +588,7 @@ HGCPhotonReco::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     info2_.fillTruth(photon2, SimTk, SimVtx);
     info2_.fillSC(sclusters[idx2]);
     getPhotonEnergy(rechitvec,info2_);
+    std::cout << "eRecoCleaned2 " << info2_.eRecoCleaned[2] <<", etrue " << info2_.eTrue << std::endl;
   }
   
   //info1_.eSeed = (clusterEmEnergy(sclusters[idx1]->seed(), clusters));
@@ -614,6 +616,9 @@ void HGCPhotonReco::getPhotonEnergy(const edm::PtrVector<HGCRecHit>& rechitvec,i
   std::vector<HGCEEDetId> detidmax;
   detidmax.resize(nLayers_,HGCEEDetId());
 
+  std::vector<HGCEEDetId> detidstack;
+  detidstack.resize(9*nLayers_,HGCEEDetId());
+
   getMaximumCell(rechitvec,phimax,etamax,detidmax);
   //if (debug_) std::cout << " -- True eta-phi " << etamax << " " << phimax << std::endl;
   //for (unsigned iL(0);iL<nLayers_;++iL){//loop on layers
@@ -629,6 +634,9 @@ void HGCPhotonReco::getPhotonEnergy(const edm::PtrVector<HGCRecHit>& rechitvec,i
   //recoE.resize(nLayers_,0);
   const HGCalTopology& topology = hgcEEGeom_->topology();
   double maxE = 0;
+	fillDetIdStack(detidmax,detidstack);
+		
+
   for (unsigned iL(0);iL<nLayers_;++iL){//loop on layers
     std::vector<double> Exy;
     Exy.resize(9,0);
@@ -754,6 +762,47 @@ void HGCPhotonReco::getMaximumCell(const edm::PtrVector<HGCRecHit>& rechitvec,co
   
 }
 */
+void HGCPhotonReco::fillDetIdStack(std::vector<HGCEEDetId> & detidmax_vec,
+				   std::vector<HGCEEDetId> & detidstack){
+	
+	for( unsigned int iL =0;iL< nLayers_ ; iL++){
+	auto detidmax = detidmax_vec[iL];
+  const HGCalTopology& topology = hgcEEGeom_->topology();
+//	if topology.valid(detidmax){	}
+  std::vector<HGCEEDetId> neighbours;
+  neighbours.resize(9,HGCEEDetId());
+  DetId tmp = topology.goSouth(detidmax);
+  if (topology.valid(tmp)) {
+    neighbours[1] = HGCEEDetId(tmp);
+    tmp = topology.goWest(neighbours[1]);
+    if (topology.valid(tmp)) neighbours[0] = HGCEEDetId(tmp);
+    tmp = topology.goEast(neighbours[1]);
+    if (topology.valid(tmp)) neighbours[2] = HGCEEDetId(tmp);
+  }
+
+  neighbours[4] = detidmax;
+  tmp = topology.goWest(neighbours[4]);
+  if (topology.valid(tmp)) neighbours[3] = HGCEEDetId(tmp);
+  tmp = topology.goEast(neighbours[4]);
+  if (topology.valid(tmp)) neighbours[5] = HGCEEDetId(tmp);
+
+  tmp = topology.goNorth(detidmax);
+  if (topology.valid(tmp)) {
+    neighbours[7] = HGCEEDetId(tmp);
+    tmp = topology.goWest(neighbours[7]);
+    if (topology.valid(tmp)) neighbours[6] = HGCEEDetId(tmp);
+    tmp = topology.goEast(neighbours[7]);
+    if (topology.valid(tmp)) neighbours[8] = HGCEEDetId(tmp);
+  }
+
+  for (unsigned idx(0);idx<9;++idx){
+		
+		detidstack[iL*9+idx]=neighbours[idx];
+
+    }
+  }
+
+}
 void HGCPhotonReco::fillNeighbours(const HGCEEDetId & detidmax,
 				   std::vector<double> & Exy,
 				   info_t & info){
@@ -802,6 +851,7 @@ void HGCPhotonReco::fillNeighbours(const HGCEEDetId & detidmax,
     double energy = theHit->energy()/mipE_*costheta;//in MIP
     Exy[idx] = energy;
   }
+	
 }
 
 //void HGCPhotonReco::getTotalEnergy(const edm::PtrVector<HGCRecHit>& rechitvec,
