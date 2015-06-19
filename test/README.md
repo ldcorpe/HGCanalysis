@@ -3,7 +3,8 @@
 You will need to get CMSSW_6_2_0_SLHC25_patch2 (or higher?).
 (instruction untested, contact me if any problems!)
 
-```cmsrel CMSSW_6_2_0_SLHC25_patch2
+```
+cmsrel CMSSW_6_2_0_SLHC25_patch2
 cd CMSSW_6_2_0_SLHC25_patch2/src
 git cms-init
 git cms-addpkg RecoEcal/EgammaClusterAlgos
@@ -13,7 +14,8 @@ git clone git@github.com:ldcorpe/HGCanalysis UserCode/HGCanalysis
 cd UserCode/HGCanalysis
 git checkout topic-HGC-phoID-TP
 cd ../../
-scram b -j9```
+scram b -j9
+```
 
 # Introduction
 
@@ -53,7 +55,8 @@ You can run them each locally using the config files:
 hoverEHggConfig_PH1_A0_PU50_MVA.py
 hoverEHggConfig_PH1_A1k_PU140_MVA.py
 hoverEHggConfig_MVA.py 
-``` (for the HGC).
+``` 
+(the last one is for the HGC).
 
 You can submit the jobs using crab 3 using the config files (+NB you need to add in some output directory LFN for this to work).
 
