@@ -69,9 +69,32 @@ class ElectronHcalHelper ;
 #include "PCAShowerAnalysis.h"
 #include "DataFormats/Math/interface/deltaR.h"
 
+//-------------> Isolation Test <----------
+#include "DataFormats/EgammaCandidates/interface/Photon.h"
+#include "RecoEgamma/PhotonIdentification/interface/PhotonIsolationCalculator.h"
+#include "CommonTools/Utils/interface/StringToEnumValue.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
+#include "RecoEgamma/EgammaIsolationAlgos/interface/EgammaTowerIsolation.h"
+#include "DataFormats/CaloTowers/interface/CaloTowerCollection.h"
+
+#include "RecoEgamma/EgammaIsolationAlgos/interface/PhotonTkIsolation.h"
+#include "RecoEgamma/EgammaIsolationAlgos/interface/EgammaRecHitIsolation.h"
+#include "DataFormats/BeamSpot/interface/BeamSpot.h"
+//------------->  END Isolation Test <----------
+
 #include "TMVA/Reader.h"
 
 using namespace std;
+
+// handy funciton to get layer within HGC
+namespace {
+template<typename DETID>
+std::pair<int,int> getlayer(const unsigned rawid) {
+DETID id(rawid);
+return std::make_pair(id.zside(),id.layer());
+}
+}
 
 int eventIndex=0;
 //
@@ -79,6 +102,7 @@ int eventIndex=0;
 //
 
 // information to be loaded into TTree
+// signal
 struct infoPhoton_t {
 
 	float eta;
@@ -106,9 +130,12 @@ struct infoPhoton_t {
 	int invalidNeighbour;
 	int eventIndex;
 	float MVA;
+	float hcalIso;
+	float ecalIso;
+	float trkIso;
 
 };
-
+// bkg tree
 struct infoBackground_t {
 	float eta;
 	float etaSC;
@@ -135,6 +162,9 @@ struct infoBackground_t {
 	int eventIndex;
 	float MVA;
 	float dRBest;
+	float hcalIso;
+	float ecalIso;
+	float trkIso;
 };
 
 // .h class info
@@ -147,6 +177,7 @@ class HoverEAnalyzer_MVA : public edm::EDAnalyzer {
 
 		double fillEmIdVars(const edm::Ptr<reco::SuperCluster>& sc,const edm::PtrVector<reco::PFCluster>& clusters,const  edm::PtrVector<HGCRecHit>& rcs, const HGCalGeometry *geom , const edm::Event& iEvent, const edm::EventSetup& iSetup);
 float annemarieEnergy( const edm::PtrVector<HGCRecHit>& rechitvec, const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float eta_ECAL, int sig=1);
+float ecalRecHitIso(  const edm::PtrVector<HGCRecHit>& rechitvec, const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float intRadius_, float outRadius_, float etaSlice, float etLow, float eLow);
 		float phiCrackDistance (float x, float y);
 		void getMaximumCell(const edm::PtrVector<HGCRecHit>& rechitvec,const double & phimax,const    double & etamax,std::vector<HGCEEDetId> & detidmax);
 		double absWeight(const unsigned layer, const bool dedx=false);
@@ -174,27 +205,42 @@ float annemarieEnergy( const edm::PtrVector<HGCRecHit>& rechitvec, const edm::Pt
 		edm::ESHandle<CaloTopology> caloTopo_;
 		unsigned long long caloTopoCacheId_;
 		edm::EDGetTokenT<edm::View<HGCRecHit> >endcapRecHitCollection_      ; 
+		edm::EDGetTokenT<edm::View<HBHERecHit> >hcalRecHitCollection_      ; 
 		edm::EDGetTokenT<edm::View<reco::SuperCluster> >endcapSuperClusterCollection_;
+	//	edm::EDGetTokenT<edm::View<reco::Photon> >endcapPhotonCollection_;
 		edm::EDGetTokenT<edm::View<reco::PFCluster> >endcapClusterCollection_     ;
 		edm::EDGetTokenT<edm::View<reco::GenParticle> >genParticlesCollection_     ;
 		edm::EDGetTokenT<edm::View<reco::PFRecHit> > eeRecHitCollection_     ;
+		edm::EDGetTokenT<edm::SortedCollection<CaloTower> >towerMaker_;
+		edm::EDGetTokenT<reco::TrackCollection> trackCollection_;
+		 edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
+		 edm::EDGetTokenT<edm::View<reco::Vertex> > vertexCollection_;
 
   std::string g4TracksSource_, g4VerticesSource_; 
 		std::vector<std::string> geometrySource_;
   	const HGCalGeometry * hgcEEGeom_;
-    
+
 		ROOT::Math::XYZPoint truthVtx_;
 		edm::Handle<HGCRecHitCollection> recHits_;	
 		int PU;
 		int process;
 		int genMatchPU;
-  double cellSize_;
-  bool doLogWeight_;
-  double mipE_;
-  unsigned nSR_;
-  unsigned debug_;
-  bool singleGamma_;
+		double cellSize_;
+		bool doLogWeight_;
+		double mipE_;
+		unsigned nSR_;
+		unsigned debug_;
+		bool singleGamma_;
 
+		//---------> Isolation test <----------
+		edm::ParameterSet conf_;
+		PhotonIsolationCalculator* thePhotonIsolationCalculator_;
+		std::vector<int> flagsexclEB_;
+		std::vector<int> flagsexclEE_;
+		std::vector<int> severitiesexclEB_;
+		std::vector<int> severitiesexclEE_;
+
+		//---------> END Isolation test <----------
 
 		TTree *treePhoton;
 		TTree *treeBackground;
@@ -211,13 +257,55 @@ float annemarieEnergy( const edm::PtrVector<HGCRecHit>& rechitvec, const edm::Pt
 HoverEAnalyzer_MVA::HoverEAnalyzer_MVA(const edm::ParameterSet& iConfig):
 	hcalHelperEndcap_(0), caloGeom_(0), caloGeomCacheId_(0), caloTopo_(0), caloTopoCacheId_(0),
 	endcapRecHitCollection_(consumes <edm::View<HGCRecHit> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapRecHitCollection",     edm::InputTag("HGCalRecHit:HGCEERecHits")))),
+	hcalRecHitCollection_(consumes <edm::View<HBHERecHit> >(iConfig.getUntrackedParameter<edm::InputTag>("hcalRecHitCollection",     edm::InputTag("reducedHcalRecHits:hbheUpgradeReco")))),
 	endcapSuperClusterCollection_(consumes <edm::View<reco::SuperCluster> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapSuperClusterCollection",edm::InputTag("particleFlowSuperClusterHGCEE")))),
+//	endcapPhotonCollection_(consumes <edm::View<reco::Photon> >(iConfig.getUntrackedParameter<edm::InputTag>("endcapPhotonCollection",edm::InputTag("photons")))),
 	endcapClusterCollection_(consumes <edm::View<reco::PFCluster> > (iConfig.getUntrackedParameter<edm::InputTag>("endcapClusterCollection",edm::InputTag("particleFlowClusterHGCEE")))),
 	genParticlesCollection_(consumes <edm::View<reco::GenParticle> > (iConfig.getUntrackedParameter<edm::InputTag>("genParticlesTag",edm::InputTag("genParticles")))),
-	eeRecHitCollection_(consumes <edm::View<reco::PFRecHit> > (iConfig.getUntrackedParameter<edm::InputTag>("eeRecHitCollection",edm::InputTag("particleFlowRecHitHGCEE:Cleaned"))))
+	eeRecHitCollection_(consumes <edm::View<reco::PFRecHit> > (iConfig.getUntrackedParameter<edm::InputTag>("eeRecHitCollection",edm::InputTag("particleFlowRecHitHGCEE:Cleaned")))),
+	towerMaker_(consumes <edm::SortedCollection<CaloTower> > (iConfig.getUntrackedParameter<edm::InputTag>("towerMaker",edm::InputTag("towerMaker")))),
+	trackCollection_(consumes <reco::TrackCollection> (iConfig.getUntrackedParameter<edm::InputTag>("generalTracks",edm::InputTag("generalTracks")))),
+	beamSpotToken_( consumes<reco::BeamSpot >( iConfig.getUntrackedParameter<edm::InputTag>( "BeamSpotTag", edm::InputTag( "offlineBeamSpot" ) ) ) ),
+	vertexCollection_(consumes <edm::View<reco::Vertex> > (iConfig.getUntrackedParameter<edm::InputTag>("offlinePrimaryVertices",edm::InputTag("offlinePrimaryVertices"))))
 
 { 
-  MVAweightfile_ = iConfig.getParameter<edm::FileInPath>( "MVAweightfile" );
+
+	//---------> Isolation test <----------
+	//Flags and Severities to be excluded from photon calculations
+/*	const std::vector<std::string> flagnamesEB = 
+		iConfig.getParameter<std::vector<std::string> >("RecHitFlagToBeExcludedEB");
+
+	const std::vector<std::string> flagnamesEE =
+		iConfig.getParameter<std::vector<std::string> >("RecHitFlagToBeExcludedEE");
+
+	flagsexclEB_= 
+		StringToEnumValue<EcalRecHit::Flags>(flagnamesEB);
+
+	flagsexclEE_=
+		StringToEnumValue<EcalRecHit::Flags>(flagnamesEE);
+
+	const std::vector<std::string> severitynamesEB = 
+		iConfig.getParameter<std::vector<std::string> >("RecHitSeverityToBeExcludedEB");
+
+	severitiesexclEB_= 
+		StringToEnumValue<EcalSeverityLevel::SeverityLevel>(severitynamesEB);
+
+	const std::vector<std::string> severitynamesEE = 
+		iConfig.getParameter<std::vector<std::string> >("RecHitSeverityToBeExcludedEE");
+
+	severitiesexclEE_= 
+		StringToEnumValue<EcalSeverityLevel::SeverityLevel>(severitynamesEE);*/
+	//---------> END Isolation test <----------
+
+
+
+
+
+
+
+
+
+	MVAweightfile_ = iConfig.getParameter<edm::FileInPath>( "MVAweightfile" );
 
 	sigmaEtaEta_=0;
 	hoe_ =0;
@@ -282,6 +370,9 @@ HoverEAnalyzer_MVA::HoverEAnalyzer_MVA(const edm::ParameterSet& iConfig):
 	treePhoton->Branch("invalidNeighbour"           ,&infoPhoton.invalidNeighbour           ,"invalidNeighbour/I");
 	treePhoton->Branch("eventIndex"           ,&infoPhoton.eventIndex           ,"eventIndex/I");
 	treePhoton->Branch("MVA"           ,&infoPhoton.MVA          ,"MVA/F");
+	treePhoton->Branch("hcalIso"           ,&infoPhoton.hcalIso          ,"hcalIso/F");
+	treePhoton->Branch("ecalIso"           ,&infoPhoton.ecalIso          ,"ecalIso/F");
+	treePhoton->Branch("trkIso"           ,&infoPhoton.trkIso          ,"trkIso/F");
 
 	treeBackground = fs_->make<TTree>("treeBackground","");
 	treeBackground->Branch("pt"                 ,&infoBackground.pt                 ,"pt/F");
@@ -306,6 +397,9 @@ HoverEAnalyzer_MVA::HoverEAnalyzer_MVA(const edm::ParameterSet& iConfig):
 	treeBackground->Branch("invalidNeighbour"           ,&infoBackground.invalidNeighbour           ,"invalidNeighbour/I");
 	treeBackground->Branch("eventIndex"           ,&infoBackground.eventIndex           ,"eventIndex/I");
 	treeBackground->Branch("MVA"           ,&infoBackground.MVA          ,"MVA/F");
+	treeBackground->Branch("ecalIso"           ,&infoBackground.ecalIso          ,"ecalIso/F");
+	treeBackground->Branch("hcalIso"           ,&infoBackground.hcalIso          ,"hcalIso/F");
+	treeBackground->Branch("trkIso"           ,&infoBackground.trkIso          ,"trkIso/F");
 	treeBackground->Branch("dRBest"            ,&infoBackground.dRBest            ,"dRBest/F");
 	cellSize_ = 1;
 	doLogWeight_ = true;
@@ -402,6 +496,10 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	Handle<edm::View<reco::SuperCluster> > HGCEESCs;
 	iEvent.getByToken(endcapSuperClusterCollection_,HGCEESCs);
 	const PtrVector<reco::SuperCluster>& sclusters = HGCEESCs->ptrVector();
+	
+/*	Handle<edm::View<reco::Photon> > pho_h;
+	iEvent.getByToken(endcapPhotonCollection_,pho_h);
+	const PtrVector<reco::Photon>& phos = pho_h->ptrVector();*/
 
 	Handle<edm::View<reco::PFCluster> > HGCEEClusters;
 	iEvent.getByToken(endcapClusterCollection_,HGCEEClusters);
@@ -412,14 +510,36 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	const PtrVector<reco::GenParticle>& gens = genParts->ptrVector();
 
 
+
 	Handle<edm::View<HGCRecHit> > eeRecHits;
 	iEvent.getByToken(endcapRecHitCollection_, eeRecHits);
 	const edm::PtrVector<HGCRecHit>& rechitvec = eeRecHits->ptrVector();
+	
+	
+	Handle<edm::View<reco::Vertex> > vtxCol;
+	iEvent.getByToken(vertexCollection_, vtxCol);
+	const edm::PtrVector<reco::Vertex>& vtxs = vtxCol->ptrVector();
 
 	edm::Handle<edm::SimTrackContainer> SimTk;
 	iEvent.getByLabel(g4TracksSource_,SimTk);
 	edm::Handle<edm::SimVertexContainer> SimVtx;
 	iEvent.getByLabel(g4VerticesSource_,SimVtx);
+
+	edm::Handle<edm::SortedCollection<CaloTower> > hcalhitsCollH;
+	iEvent.getByToken(towerMaker_, hcalhitsCollH);
+
+	edm::Handle<reco::TrackCollection> tracks;
+	iEvent.getByToken(trackCollection_,tracks);
+	const reco::TrackCollection* trackCollection = tracks.product();
+
+	Handle<reco::BeamSpot> recoBeamSpotHandle;
+	iEvent.getByToken( beamSpotToken_, recoBeamSpotHandle );
+	math::XYZPoint vertexPoint;
+	//    float beamsig;
+	if( recoBeamSpotHandle.isValid() ) {
+		vertexPoint = recoBeamSpotHandle->position();
+		//                                    //      beamsig = recoBeamSpotHandle->sigmaZ();
+	}
 
 
 	int photonFound =0;
@@ -427,7 +547,7 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 	float photonFoundSCEta = -999.;
 	float photonFoundSCPhi = -999.;
 
-
+// loop over gen particles to get genphoton
 	for (unsigned int igp =0; igp < gens.size() ; igp++) { // loop over gen particles to fill truth-level tree
 
 		infoPhoton.eta=-999.;
@@ -450,12 +570,14 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		infoPhoton.eventIndex=eventIndex;
 
 		float dRBest =999;
-	//	float dRMax= 0.01;
+		//	float dRMax= 0.01;
 		float dRMax= 0.1;
 
-		if (fabs(gens[igp]->pdgId()) != 22) continue;
-		if(gens[igp]->status() != 1) continue;
-		if(gens[igp]->mother()->status() != 44) continue;
+		if (fabs(gens[igp]->pdgId()) != 22) continue; //only want photons
+		if(gens[igp]->status() != 1) continue; // only want status 1 photons
+		if(gens[igp]->mother()->status() != 44) continue; // onyl want status 1 photon who come from primary interaction
+
+		// baisc position/energy vars
 		infoPhoton.eta   = gens[igp]->eta();
 		infoPhoton.phi   = gens[igp]->phi();
 		infoPhoton.pt    = gens[igp]->pt();
@@ -477,6 +599,10 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		float eta_ECAL = -std::log(std::tan(std::asin(h/std::sqrt(h*h+zHGC*zHGC))/2)) ;
 		if  (infoPhoton.eta <0) eta_ECAL = -1*eta_ECAL;
 
+		// photon eta is the *direction* of the photon. If you use teh simple eta variable only to gauge
+		// its position, you are implictly assuming it starts at the origin. 
+		// So instead, use eta_ECAL, which takes teh gen vertex position, and applied teh eta direction to extrapolate the
+		// actual eta position within the detetcor where teh SC is expected to be.
 		infoPhoton.etaEcal =eta_ECAL;
 		infoPhoton.phiEcal = infoPhoton.phi;
 		infoPhoton.x = (zHGC/std::cos(theta))* std::sin(theta) *std::cos(infoPhoton.phi);
@@ -488,6 +614,9 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 		const double z = std::fabs(hitPos.z());
 		infoPhoton.converted = (unsigned)(z < 317 && z > 1e-3);
 
+		// the above follows the geant4 sim tracks for teh photons and tries to figure out if there is an
+		// electron-positron pair: ie if teh photon has converted.
+		// if teh photon converted between the origin and the face of teh detetcor, call it converted.
 
 		for (unsigned int isc =0; isc < sclusters.size() ; isc++){ //subloop over sc's to find matches
 
@@ -501,12 +630,11 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 			dP =dP*dP;
 			float dR = sqrt(dE +dP);
 
-			//	std::cout << "DEBUG SC " << isc << ", gen e, " << gens[igp]->eta() << ", " << gens[igp]->phi() << ", sc " << sclusters[isc]->eta() << " " <<  sclusters[isc]->phi() << ", dR " << dR <<", dRBest " << dRBest << " , detector!=HGCEE " << (detector!=HGCEE) << std::endl;
-
+			// match nearest SC
 			if (dR < dRBest && dR<dRMax) { // only true if dR is both below limit value and smaller than previous best dR.
 				dRBest = dR;
 				infoPhoton.matchIndex = isc;
-			  infoPhoton.dRBest =dRBest;
+				infoPhoton.dRBest =dRBest;
 			}
 		}
 
@@ -517,16 +645,84 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 			photonFound =1;
 			photonFoundIndex= infoPhoton.matchIndex;
+			if (photonFoundIndex);
 			infoPhoton.recopt =  infoPhoton.eReco/std::cosh(infoPhoton.etaSC);
 			infoPhoton.etaSC    = sclusters[infoPhoton.matchIndex]->eta();
 			infoPhoton.phiSC    = sclusters[infoPhoton.matchIndex]->phi();
 			photonFoundSCEta= infoPhoton.etaSC;
 			photonFoundSCPhi= infoPhoton.phiSC;
 
-			std::cout << "debug - found photon. gen e,p "<< infoPhoton.eta <<", " << infoPhoton.phi << ", e,p ecal "<< infoPhoton.etaEcal << ", " << infoPhoton.phiEcal << ", e,p SC " << infoPhoton.etaSC<< ", "<< infoPhoton.phiSC << " ereco " << infoPhoton.eReco <<", eTrue " << infoPhoton.eTrue <<" CONVERTED " << infoPhoton.converted<< std::endl;
-			std::cout << "debug - photonFoundIndex"<< photonFoundIndex <<", photonFoundSCEta"  << photonFoundSCEta<< ", photonFoundSCPhi " <<  photonFoundSCPhi<<std::endl;
+			///---------> Isolation avraibles test <-------------
+			//		thePhotonIsolationCalculator_ = new PhotonIsolationCalculator();
+			//		edm::ParameterSet isolationSumsCalculatorSet = conf_.getParameter<edm::ParameterSet>("isolationSumsCalculatorSet");
+			//		thePhotonIsolationCalculator_->setup(isolationSumsCalculatorSet, flagsexclEB_, flagsexclEE_, severitiesexclEB_, severitiesexclEE_);//,consumesCollector());
+
+			//		reco::Photon::FiducialFlags fiducialFlags;
+			//		reco::Photon::IsolationVariables isolVarR03, isolVarR04;
+			//	thePhotonIsolationCalculator_-> calculate ( &newCandidate,iEvent,es,fiducialFlags,isolVarR04, isolVarR03);
+			//	thePhotonIsolationCalculator_-> calculate ( (reco::Photon) sclusters[infoPhoton.matchIndex],iEvent,iSetup,fiducialFlags,isolVarR04, isolVarR03);
+			//	reco::PhotonCore newCandidate(reco::SuperClusterRef(HGCEESCs,infoPhoton.matchIndex));
+			//		reco::SuperClusterRef scRef(reco::SuperClusterRef(HGCEESCs,infoPhoton.matchIndex );
+			/*	math::XYZTLorentzVectorD p4(1,1,1,1);
+					math::XYZPoint vtx(0.,0.,0.);
+					reco::Photon *ph(p4,(sclusters[infoPhoton.matchIndex])->position(),newCandidate,vtx);
+					thePhotonIsolationCalculator_-> calculate ( ph,iEvent,iSetup,fiducialFlags,isolVarR04, isolVarR03);*/
+
+			//	const std::vector<CaloTowerDetId> detIdToExclude;
+			//iEvent.getByToken(hcalRecHitCollection_, hcalhitsCollH);
+			//const CaloTowerCollection *toww = hcalhitsCollH.product();
+			//const CaloTowerCollection *toww = hcalhitsCollH.product();
+			//
+
+			///---------> Isolation avraibles test <-------------
+			// Isoaltion avriables not srcitly needed for the basic phoID study.
+			// And anyway you'd want to use the pfIsolation vars instead.
+
+			EgammaTowerIsolation phoIsoHcal(0.4,0.15,0.0,1,hcalhitsCollH.product());
+			const std::vector<CaloTowerDetId> * detIdToExclude=0;
+			double hcalIso = phoIsoHcal.getTowerEtSum(sclusters[infoPhoton.matchIndex].get(), *&detIdToExclude) ;
+			infoPhoton.hcalIso = hcalIso;
+
+			PhotonTkIsolation phoIsoTrk(0.4, 
+					0.04, 
+					0.015,  
+					0.0, 
+					0.2, 
+					0.1, 
+					trackCollection, 
+					math::XYZPoint(vertexPoint.x(),vertexPoint.y(),vertexPoint.z()));
+
+			  std::pair<int,double> res = phoIsoTrk.getIso(sclusters[infoPhoton.matchIndex].get(), *vtxs[0]);
+				infoPhoton.trkIso = res.second;
+				
+				float innerCone = 0.06;
+				float outerCone = 0.3;
+				float etaSlice  = 0.04;
+				float minEt  = 0.110;
+				float minE  = 0.08;
+				infoPhoton.ecalIso = ecalRecHitIso(rechitvec, sclusters[infoPhoton.matchIndex],geometrySource_,iEvent, iSetup,innerCone,outerCone,etaSlice, minEt,minE);
 
 
+
+			std::cout << " DEBUG - HCAL iso "  << infoPhoton.hcalIso<< std::endl;
+			std::cout << " DEBUG - TRK iso "  << 	infoPhoton.trkIso << std::endl;
+			std::cout << " DEBUG - ECAL iso "  << 	infoPhoton.ecalIso << std::endl;
+
+		/*	EgammaRecHitIsolation   phoIsoEE(0.4,
+					0.06,
+					2.5,
+					0.110,
+					0,
+					geomH,
+					*HGCRecHitCollection);*/
+
+		//		infoPhoton.ecalIso = phoIsoEE.getEtSum(sclusters[infoPhoton.matchIndex].get());
+
+			///---------> END Isolation avraibles test <-------------
+
+
+
+			// fill regular isolation vars.
 			double sieie =  fillEmIdVars(sclusters[infoPhoton.matchIndex], clusters,  rechitvec, geom,iEvent, iSetup);
 			if (sieie);
 
@@ -538,10 +734,12 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 			float hoe =had/scle;
 			infoPhoton.hoe = hoe;
 			hoe_ = hoe;
+			//fill dummy MVA, but this will be done on the fly later.
+			//can probably skip this etst and fill with some constant value for now.
 			infoPhoton.MVA = Mva_->EvaluateMVA( "BDTG" );
 
 		}
-			treePhoton->Fill();
+		treePhoton->Fill();
 
 
 	}
@@ -550,7 +748,7 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 
 	if(photonFound){ //only want SCs which are NOT the photon.
 		//--------------> Begin per-Background tree <---------------------- 
-		int nSCAnalyzed =0;
+		//	int nSCAnalyzed =0;
 
 		for( unsigned int isc =0; isc< sclusters.size() ; isc++){ // isc = index_super_cluster
 
@@ -572,8 +770,8 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 			float dRPho = sqrt(dEPho +dPPho);
 			infoBackground.dRPhoton = dRPho;
 
-			std::cout << "debug - photonFoundIndex"<< photonFoundIndex <<", photonFoundSCEta"  << photonFoundSCEta<< ", photonFoundSCPhi " <<  photonFoundSCPhi<< "  sclusters[isc]->eta() " << sclusters[isc]->eta() <<", sclusters[isc]->phi()" << sclusters[isc]->phi()<< std::endl;
-			std::cout << " debug dRPho " << dRPho << ", dEPho " << dEPho << ", dPPho " << dPPho << std::endl;	
+			//	std::cout << "debug - photonFoundIndex"<< photonFoundIndex <<", photonFoundSCEta"  << photonFoundSCEta<< ", photonFoundSCPhi " <<  photonFoundSCPhi<< "  sclusters[isc]->eta() " << sclusters[isc]->eta() <<", sclusters[isc]->phi()" << sclusters[isc]->phi()<< std::endl;
+			//	std::cout << " debug dRPho " << dRPho << ", dEPho " << dEPho << ", dPPho " << dPPho << std::endl;	
 			if ( dRPho<1. ) continue;
 			//infoBackground.pt= sclusters[isc]->energy()/std::cosh(sclusters[isc]->eta());
 
@@ -591,7 +789,7 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 			//	std::cout << " jet match truth " << infoBackground.eta << ", " << infoBackground.phi << ", reco " << infoBackground.etaSC << ", " << infoBackground.phiSC << std::endl;
 
 
-
+			// fill ID vars
 			double sieie =  fillEmIdVars(sclusters[isc], clusters,  rechitvec,  geom,iEvent, iSetup  );
 			if (sieie);
 
@@ -602,21 +800,57 @@ HoverEAnalyzer_MVA::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 			float hoe =had/scle;
 			infoBackground.hoe = hoe;
 			hoe_ =hoe;
-			//	std::cout << " debug quark/gluon  " <<gens[igp]->pdgId()<<", status " <<  gens[igp]->status() <<"  pass " << gens[igp]->eta() << ", " << gens[igp]->phi() <<", status " << gens[igp]->status() << ", mother status " << gens[igp]->mother()->status() << ", dRbest " << dRBest << ", eReco " <<  infoBackground.eReco << ", eSC " << scle << ", etrue " << infoBackground.eTrue  << ", eReco/eTrue >0.7 ?" << (infoBackground.eReco/infoBackground.eTrue >0.7)<< ", eSC/eTrue >0.7 ?" << (scle/infoBackground.eTrue >0.7)<< std::endl;
 			infoBackground.MVA = Mva_->EvaluateMVA( "BDTG" );
+			///---------> Isolation avraibles test <-------------
+
+			EgammaTowerIsolation phoIso(0.4,0.15,0.0,1,hcalhitsCollH.product());
+			const std::vector<CaloTowerDetId> * detIdToExclude=0;
+			double hcalIso = phoIso.getTowerEtSum(sclusters[isc].get(), *&detIdToExclude) ;
+			infoBackground.hcalIso = hcalIso;
+
+			PhotonTkIsolation phoIsoTrk(0.4, 
+					0.04, 
+					0.015,  
+					0.0, 
+					0.2, 
+					0.1, 
+					trackCollection, 
+					math::XYZPoint(vertexPoint.x(),vertexPoint.y(),vertexPoint.z()));
+
+			std::pair<int,double> res = phoIsoTrk.getIso(sclusters[isc].get(), *vtxs[0]);
+			infoBackground.trkIso = res.second;
+				float innerCone = 0.06;
+				float outerCone = 0.3;
+				float etaSlice  = 0.04;
+				float minEt  = 0.110;
+				float minE  = 0.08;
+				infoBackground.ecalIso = ecalRecHitIso(rechitvec, sclusters[isc],geometrySource_,iEvent, iSetup,innerCone,outerCone,etaSlice, minEt,minE);
+
+
+
+			std::cout << " DEBUG - HCAL iso "  << infoBackground.hcalIso<< std::endl;
+			std::cout << " DEBUG - TRK iso "  << 	infoBackground.trkIso << std::endl;
+			std::cout << " DEBUG - ECAL iso "  << 	infoBackground.ecalIso << std::endl;
+
+
+
+
+
+
+			///---------> END Isolation avraibles test <-------------
 
 			treeBackground->Fill();
 
 
 		}
-		std::cout << "nSCAnalyzed " << nSCAnalyzed << std::endl;
+		//	std::cout << "nSCAnalyzed " << nSCAnalyzed << std::endl;
 	}
 
 
 	/*
 		 if(photonFound){ //only want SCs which are NOT the photon.
 //--------------> Begin per-Background tree <---------------------- 
-    actory->AddVariable("sigmaEtaEta" );
+actory->AddVariable("sigmaEtaEta" );
 int nSCAnalyzed =0;
 
 for (unsigned int igp =0; igp < gens.size() ; igp++) { // loop over gen particles to fill truth-level tree
@@ -742,7 +976,74 @@ if (infoBackground.matchIndex>-1){
 
 return ;
 }
+float HoverEAnalyzer_MVA::ecalRecHitIso( const edm::PtrVector<HGCRecHit>& rechitvec, const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float intRadius_,float outRadius_, float etaSlice, float etLow, float eLow ){
 
+	std::map<int,const HGCalGeometry *> hgcGeometries;
+	edm::ESHandle<HGCalGeometry> hgcGeo;
+	iSetup.get<IdealGeometryRecord>().get(geometrySource_[0],hgcGeo);
+	hgcGeometries[0]=hgcGeo.product();
+	double  phi = sc->seed()->phi();
+	double  eta = sc->seed()->eta();//sc;
+
+	int nLayers_=30;
+	int count=0;
+	std::vector<HGCEEDetId> detidmax;
+	detidmax.resize(nLayers_,HGCEEDetId());
+//	const double _coef_a = 80.0837, _coef_c = 0.0472817, _coef_d = -0.266294, _coef_e = 0.34684;
+//	double corr = _coef_a*fabs(std::tanh(eta))/(1.-(_coef_c*pow(eta,2)+_coef_d*fabs(eta)+_coef_e));
+//	double mip = 0.0000551;
+//	double weight[30] = {0.080,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.62,0.809,0.809,0.809,0.809,0.809,0.809,0.809,0.809,0.809,0.809,1.239,1.239,1.239,1.239,1.239,1.239,1.239,1.239,1.239};
+
+	std::vector<HGCEEDetId> detidstack;
+	detidstack.resize(9*nLayers_,HGCEEDetId());
+  float r2 = intRadius_*intRadius_;
+  float R2 = outRadius_*outRadius_;
+	double energySum=0;
+	double energySum2=0;
+	
+	
+	for (unsigned iH(0); iH<rechitvec.size(); ++iH){//loop on rechits
+		const HGCRecHit & lHit = *(rechitvec[iH]);
+		const HGCEEDetId & hgcid = lHit.detid();
+		GlobalPoint cellPos = hgcEEGeom_->getPosition(hgcid);
+		int layer = getlayer<HGCHEDetId>(hgcid).second;
+		double posx = cellPos.x();
+		double posy = cellPos.y();
+		double posz = cellPos.z();
+		
+
+		ROOT::Math::XYZVector pos(posx-truthVtx_.x(),posy-truthVtx_.y(),posz-truthVtx_.z());
+		double deta = fabs(pos.eta()-eta);
+		double dphi = deltaPhi(pos.phi(),phi);
+
+		double dR2 = pow(deta,2)+pow(dphi,2);
+
+		if (fabs(deta)<etaSlice) continue;
+		if (dR2<r2 || dR2>R2) continue;
+				
+				double costheta = fabs(posz)/sqrt(posz*posz+posx*posx+posy*posy);
+				double energy = lHit.energy()/mipE_*costheta;//in MIP
+			std::cout << "l.Hit.energy() " <<lHit.energy() << ", mipE_ "<< mipE_ <<", costheta " << costheta << ", absWeight(layer) " << absWeight(layer)<< ", layer : " << layer << std::endl;
+				energy= energy*absWeight(layer);
+
+		 float et = energy/std::cosh(pos.eta());
+		  if ( et > etLow && energy > eLow) {
+		 std::cout << "rechit "<< count <<" energy " << energy << ", et " << et << ", dr " << sqrt(dR2) << ", RH eta, phi " << pos.eta() <<"," << pos.phi()<<  ", SC eta, phi " << eta<<", "<<phi << std::endl; 
+			energySum+=et;
+			energySum2+=energy;
+			std::cout << " == Running energy sum " << energySum2 << ", runnign et sum " << energySum << std::endl;
+
+			count++;
+			}
+		 }
+
+
+
+
+	return energySum;
+
+}
+ // anne marie's 3x3 energy.
 float HoverEAnalyzer_MVA::annemarieEnergy( const edm::PtrVector<HGCRecHit>& rechitvec, const edm::Ptr<reco::SuperCluster>& sc, 	std::vector<std::string> geometrySource_, const edm::Event& iEvent, const edm::EventSetup& iSetup, float eta_ECAL, int sig){
 
 	std::map<int,const HGCalGeometry *> hgcGeometries;

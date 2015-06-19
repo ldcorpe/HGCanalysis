@@ -78,6 +78,7 @@ using namespace std;
 //
 
 // information to be loaded into TTree
+// Signal variables
 struct infoPhoton_t {
 
 	float eta;
@@ -106,7 +107,7 @@ struct infoPhoton_t {
 	float dRBest;
 
 };
-
+// Background variables
 struct infoBackground_t {
 	float eta;
 	float etaSC;
@@ -249,7 +250,7 @@ HoverEAnalyzer_Phase1::HoverEAnalyzer_Phase1(const edm::ParameterSet& iConfig):
 	//	hoe_Sig_h         = fs_->make<TH1F>("hoe_Sig_h","hoe_Sig__h",1000,0,1);
 	//	hoe_PU_h         = fs_->make<TH1F>("hoe_PU_h","hoe_PU__h",1000,0,1);
 
-
+  // set up the trees
 	treePhoton = fs_->make<TTree>("treePhoton","");
 	treePhoton->Branch("pt"                 ,&infoPhoton.pt                 ,"pt/F");
 	treePhoton->Branch("hoe"                ,&infoPhoton.hoe                ,"hoe/F");
@@ -417,7 +418,8 @@ HoverEAnalyzer_Phase1::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	float photonFoundSCPhi = -999.;
 
 	std::cout << "debug 1 =======================================================" << std::endl;
-
+	
+	// first, loop over gen particles and find the gen photon!
 	for (unsigned int igp =0; igp < gens.size() ; igp++) { // loop over gen particles to fill truth-level tree
 
 		infoPhoton.eta=-999.;
@@ -442,40 +444,50 @@ HoverEAnalyzer_Phase1::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 		//float dRMax= 0.1;
 		float dRMax= 0.1;
 
-		if (fabs(gens[igp]->pdgId()) != 22) continue;
-		if(gens[igp]->status() != 1) continue;
-		if(gens[igp]->mother()->status() != 44) continue;
+		if (fabs(gens[igp]->pdgId()) != 22) continue; // only want photons
+		if(gens[igp]->status() != 1) continue; // only want status 1
+		if(gens[igp]->mother()->status() != 44) continue; // mother should be status 44, indicating it was inside teh primary interaction.
+
+		// get basic position / energy vars
 		infoPhoton.eta   = gens[igp]->eta();
 		infoPhoton.phi   = gens[igp]->phi();
 		infoPhoton.pt    = gens[igp]->pt();
 		infoPhoton.et    = (gens[igp]->energy())/std::cosh(infoPhoton.eta);
 		infoPhoton.eTrue = gens[igp]->energy();
 		
-		float zHGC =320.38; //FIXME
-		float rHGC = 32.0228; //FIXME
-		float RHGC = 152.153; //FIXME
+		// extrapolate position in x/y on face of teh HGC/ECAL
+		float zHGC =320.38; //
+		float rHGC = 32.0228; //
+		float RHGC = 152.153; //FIXME not exactly right for PH1 scenario (this is for HGC)
+		// not a big deal since this teh x/y variables are not really used for phoID study
 		if (infoPhoton.eta <0) zHGC = -1*zHGC;
 		math::XYZPoint vPos = gens[igp]->vertex();
 
 		float theta = 2*std::atan(std::exp(-infoPhoton.eta));
 		float h = std::tan(theta)*(zHGC-vPos.z());
-		if (h>RHGC || h<rHGC);// {
-		//		std::cout << "debug skip because h>RHGC || h<rHGC gives 1" << std::endl; 
-		//		continue;
-		//		}
+		if (h>RHGC || h<rHGC);
 		float eta_ECAL = -std::log(std::tan(std::asin(h/std::sqrt(h*h+zHGC*zHGC))/2)) ;
 		if  (infoPhoton.eta <0) eta_ECAL = -1*eta_ECAL;
+		// photon eta is the *direction* of the photon. If you use teh simple eta variable only to gauge
+		// its position, you are implictly assuming it starts at the origin. 
+		// So instead, use eta_ECAL, which takes teh gen vertex position, and applied teh eta direction to extrapolate the
+		// actual eta position within the detetcor where teh SC is expected to be.
 		
 		infoPhoton.etaEcal =eta_ECAL;
 		infoPhoton.phiEcal = infoPhoton.phi;
 		infoPhoton.x = (zHGC/std::cos(theta))* std::sin(theta) *std::cos(infoPhoton.phi);
 		infoPhoton.y = (zHGC/std::cos(theta))* std::sin(theta) *std::sin(infoPhoton.phi);
 	//	infoPhoton.phiCrackDistance = phiCrackDistance(infoPhoton.x, infoPhoton.y);
-		if(fabs(gens[igp]->eta()) <1.5 ||fabs(gens[igp]->eta())  > 3) continue;
+		if(fabs(gens[igp]->eta()) <1.5 ||fabs(gens[igp]->eta())  > 3) continue; // should probably use eta_ECAL here
+		// but it doesn't matter because we use in the end 1.6 to 2.5, and don't expect that large a correction usign eta_ECAL
+
 		truthVtx_=gens[igp]->vertex();
 		math::XYZVectorD hitPos=getInteractionPositionLC(SimTk.product(),SimVtx.product(), gens[igp]->pt()).pos;
+		// the above follows the geant4 sim tracks for teh photons and tries to figure out if there is an
+		// electron-positron pair: ie if teh photon has converted.
 		const double z = std::fabs(hitPos.z());
 		infoPhoton.converted = (unsigned)(z < 317 && z > 1e-3); //FIXME
+		// if teh photon converted between the origin and the face of teh detetcor, call it converted.
 
 
 	std::cout << "debug 02=======================================================" << std::endl;
@@ -492,7 +504,6 @@ HoverEAnalyzer_Phase1::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 			dP =dP*dP;
 			float dR = sqrt(dE +dP);
 
-			//	std::cout << "DEBUG SC " << isc << ", gen e, " << gens[igp]->eta() << ", " << gens[igp]->phi() << ", sc " << sclusters[isc]->eta() << " " <<  sclusters[isc]->phi() << ", dR " << dR <<", dRBest " << dRBest << " , detector!=HGCEE " << (detector!=HGCEE) << std::endl;
 
 			if (dR < dRBest && dR<dRMax) { // only true if dR is both below limit value and smaller than previous best dR.
 				dRBest = dR;
@@ -503,8 +514,7 @@ HoverEAnalyzer_Phase1::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 
 		//float recoPt = -999.;
 		if (infoPhoton.matchIndex >-1) {
-			infoPhoton.eReco = sclusters[infoPhoton.matchIndex]->energy() ;//qnnemarieEnergy(rechitvec,sclusters[infoPhoton.matchIndex],geometrySource_,iEvent, iSetup, eta_ECAL ) ;
-
+			infoPhoton.eReco = sclusters[infoPhoton.matchIndex]->energy() ;
 
 	std::cout << "debug 3 =======================================================" << std::endl;
 			photonFound =1;
@@ -514,25 +524,17 @@ HoverEAnalyzer_Phase1::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 			infoPhoton.phiSC    = sclusters[infoPhoton.matchIndex]->phi();
 			photonFoundSCEta= infoPhoton.etaSC;
 			photonFoundSCPhi= infoPhoton.phiSC;
-			if(photonFoundIndex);
-			
-		//	std::cout << "debug - found photon. gen e,p "<< infoPhoton.eta <<", " << infoPhoton.phi << ", e,p ecal "<< infoPhoton.etaEcal << ", " << infoPhoton.phiEcal << ", e,p SC " << infoPhoton.etaSC<< ", "<< infoPhoton.phiSC << " ereco " << infoPhoton.eReco <<", eTrue " << infoPhoton.eTrue <<" CONVERTED " << infoPhoton.converted<< std::endl;
-		//	std::cout << "debug - photonFoundIndex"<< photonFoundIndex <<", photonFoundSCEta"  << photonFoundSCEta<< ", photonFoundSCPhi " <<  photonFoundSCPhi<<std::endl;
-
-
-		//	double sieie =  fillEmIdVars(sclusters[infoPhoton.matchIndex], clusters,  rechitvec, geom,iEvent, iSetup);
-		//	if (sieie);
-
-
-		//	float had =hcalHelperEndcap_->HCALClustersBehindSC(*(scl.get()));
-
-		//	float  scle =  sclusters[infoPhoton.matchIndex]->energy();
-		//	float hoe =had/scle;
+			if(photonFoundIndex); // avoid unused varibale errors in CMSSW
+			// want to keep this variable around in case we need it. at the moment we use photonFound instead.
+			//
+			// calc phoID vairbales:
 			infoPhoton.hoe = sclusters[infoPhoton.matchIndex]->hadronicOverEm();
 			infoPhoton.sigmaIetaIeta =sclusters[infoPhoton.matchIndex]->sigmaIetaIeta();
 			
 			sigmaIetaIeta_ = infoPhoton.sigmaIetaIeta;
 			hoe_ = infoPhoton.hoe;
+			//evaluate dummy BDT score, this will be redone later.
+			//you could probably remove this now, sicne we do properly it on the fly later
 			infoPhoton.MVA = Mva_->EvaluateMVA( "BDTG" );
 			
 		}
@@ -567,16 +569,11 @@ HoverEAnalyzer_Phase1::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 				float dRPho = sqrt(dEPho +dPPho);
 				infoBackground.dRPhoton = dRPho;
 
-			//	std::cout << "debug - photonFoundIndex"<< photonFoundIndex <<", photonFoundSCEta"  << photonFoundSCEta<< ", photonFoundSCPhi " <<  photonFoundSCPhi<< "  sclusters[isc]->eta() " << sclusters[isc]->eta() <<", sclusters[isc]->phi()" << sclusters[isc]->phi()<< std::endl;
-			//	std::cout << " debug dRPho " << dRPho << ", dEPho " << dEPho << ", dPPho " << dPPho << std::endl;	
-				if ( dRPho<1. ) continue;
-				//infoBackground.pt= sclusters[isc]->energy()/std::cosh(sclusters[isc]->eta());
-
-				//	if (infoBackground.pt <4) continue;
+				if ( dRPho<1. ) continue; // don;t want SCs too close to the true photon
+				
 				infoBackground.pt= sclusters[isc]->energy() /std::cosh(sclusters[isc]->eta());
 
 				if( infoBackground.pt <20.) continue;
-				//	infoBackground.eta=sclusters[isc]->eta();
 	std::cout << "debug 4 =======================================================" << std::endl;
 				infoBackground.etaSC=sclusters[isc]->eta();
 				infoBackground.eReco =sclusters[isc]->energy();// annemarieEnergy(rechitvec,sclusters[isc],geometrySource_,iEvent, iSetup, infoBackground.eta ,0) ;
@@ -593,7 +590,6 @@ HoverEAnalyzer_Phase1::analyze(const edm::Event& iEvent, const edm::EventSetup& 
 	std::cout << "debug 5 =======================================================" << std::endl;
 			infoBackground.hoe = sclusters[isc]->hadronicOverEm();
 			infoBackground.sigmaIetaIeta =sclusters[isc]->sigmaIetaIeta();
-			//	std::cout << " debug quark/gluon  " <<gens[igp]->pdgId()<<", status " <<  gens[igp]->status() <<"  pass " << gens[igp]->eta() << ", " << gens[igp]->phi() <<", status " << gens[igp]->status() << ", mother status " << gens[igp]->mother()->status() << ", dRbest " << dRBest << ", eReco " <<  infoBackground.eReco << ", eSC " << scle << ", etrue " << infoBackground.eTrue  << ", eReco/eTrue >0.7 ?" << (infoBackground.eReco/infoBackground.eTrue >0.7)<< ", eSC/eTrue >0.7 ?" << (scle/infoBackground.eTrue >0.7)<< std::endl;
 			sigmaIetaIeta_ = infoBackground.sigmaIetaIeta;
 			hoe_ = infoBackground.hoe;
 			infoBackground.MVA = Mva_->EvaluateMVA( "BDTG" );

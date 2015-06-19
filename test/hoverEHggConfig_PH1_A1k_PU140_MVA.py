@@ -55,15 +55,18 @@ if (len(sys.argv) ==0):
 
 processList = ["gamJet","ZEE","QCD"]
 #fileNames
+#this is the onyl one you care about.
 if(process_ ==0): 
 	with open('sample/140PU/gamJet_age140PU.txt','r') as f:
 		fileNames = f.readlines()
 
+
+#no longer needed
 if(process_ ==1): 
 	with open('sample/140PU/Zee.txt','r') as f:
 		fileNames = f.readlines()
 
-
+#no longer needed
 if(process_ ==2): 
 	with open('sample/140PU/Qcd.txt','r') as f:
 		fileNames = f.readlines()

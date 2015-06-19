@@ -5,7 +5,7 @@
 #include "TMVA/Reader.h"
 
 void makeTrainTrees(int iO=0){
-std::cout << "========== Eta-Reweighing ==========" << std::endl;
+std::cout << "========== Eta/pt-Reweighing ==========" << std::endl;
 std::cout <<"[INFO] option specifed = " << iO << " - " ;
 if (iO==0) {
 std::cout << " please use: " << std::endl 
@@ -38,6 +38,9 @@ if (iO==1 || iO==-1){
 	float etaSC;
 	float etaEcal;
 	float sigmaIetaIeta;
+	float trkIso;
+	float ecalIso;
+	float hcalIso;
 	float hoe;
 	int matchIndex;
 	float weight;
@@ -153,6 +156,9 @@ if (iO==2|| iO==-1){
 	float etaSC;
 	float etaEcal;
 	float sigmaIetaIeta;
+	float trkIso;
+	float ecalIso;
+	float hcalIso;
 	float hoe;
 	int matchIndex;
 	//New tree
@@ -243,6 +249,7 @@ if (iO==3 || iO==-1){
 
 	//------- Files to update ----------//
 	TFile *_file1 = TFile::Open("HoverE_HGC_015.root","update");
+	//TFile *_file1 = TFile::Open("HoverEHggPU140_gamJet_ssz3_Isolation.root","update");
 
 	//------- New Files --------------//
 	TFile *Louie = new TFile ("HoverE_HGC_weight.root","RECREATE");
@@ -255,6 +262,9 @@ if (iO==3 || iO==-1){
 	float sigmaEtaEta;
 	float hoe;
 	float lengthCompatibility;
+	float trkIso;
+	float ecalIso;
+	float hcalIso;
 	int matchIndex;
 	//New tree
 	float weight;
@@ -268,6 +278,9 @@ if (iO==3 || iO==-1){
 	ts1->SetBranchAddress("sigmaEtaEta",&sigmaEtaEta);
 	ts1->SetBranchAddress("hoe"          ,&hoe          );
 	ts1->SetBranchAddress("lengthCompatibility"          ,&lengthCompatibility         );
+	ts1->SetBranchAddress("trkIso"          ,&trkIso         );
+	ts1->SetBranchAddress("ecalIso"          ,&ecalIso         );
+	ts1->SetBranchAddress("hcalIso"          ,&hcalIso         );
 	ts1->SetBranchAddress("matchIndex"   ,&matchIndex   );
 
 	/*TTree *ts2 = (TTree*) _file2->Get("hgg/treePhoton");
@@ -286,6 +299,9 @@ if (iO==3 || iO==-1){
 	tPho->Branch("sigmaEtaEta",&sigmaEtaEta,"sigmaEtaEta/F");
 	tPho->Branch("hoe"          ,&hoe          ,"hoe/F"          );
 	tPho->Branch("lengthCompatibility"          ,&lengthCompatibility          ,"lengthCompatibility/F"          );
+	tPho->Branch("trkIso"          ,&trkIso          ,"trkIso/F"          );
+	tPho->Branch("ecalIso"          ,&ecalIso          ,"ecalIso/F"          );
+	tPho->Branch("hcalIso"          ,&hcalIso          ,"hcalIso/F"          );
 	tPho->Branch("matchIndex"   ,&matchIndex   ,"matchIndex/I"   );
 
 
@@ -309,6 +325,9 @@ if (iO==3 || iO==-1){
 	tb1->SetBranchAddress("sigmaEtaEta",&sigmaEtaEta);
 	tb1->SetBranchAddress("hoe"          ,&hoe          );
 	tb1->SetBranchAddress("lengthCompatibility"          ,&lengthCompatibility         );
+	tb1->SetBranchAddress("trkIso"          ,&trkIso         );
+	tb1->SetBranchAddress("ecalIso"          ,&ecalIso         );
+	tb1->SetBranchAddress("hcalIso"          ,&hcalIso         );
 	tb1->SetBranchAddress("matchIndex"   ,&matchIndex   );
 
 	//-----------Background -----------------
@@ -320,6 +339,9 @@ if (iO==3 || iO==-1){
 	tBkg->Branch("sigmaEtaEta",&sigmaEtaEta,"sigmaEtaEta/F");
 	tBkg->Branch("hoe"          ,&hoe          ,"hoe/F"          );
 	tBkg->Branch("lengthCompatibility"          ,&lengthCompatibility          ,"lengthCompatibility/F"          );
+	tBkg->Branch("trkIso"          ,&trkIso          ,"trkIso/F"          );
+	tBkg->Branch("ecalIso"          ,&ecalIso          ,"ecalIso/F"          );
+	tBkg->Branch("hcalIso"          ,&hcalIso          ,"hcalIso/F"          );
 	tBkg->Branch("matchIndex"   ,&matchIndex   ,"matchIndex/I"   );
 
 	nentries = tb1->GetEntries();
